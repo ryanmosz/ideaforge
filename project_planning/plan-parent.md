@@ -1,18 +1,18 @@
 # Parent Task Development Plan Request
 
-**IMPORTANT**: The output from this prompt will create a new file named `parent-task-[TASK-ID]-plan.md`. Any previously generated file from this prompt should be moved to `project_planning/retired/` before generating a new one.
+**IMPORTANT**: This prompt follows the PRD generation process defined in `.cursor/rules/create-feature-prd.mdc`. The output will create a new file named `prd-parent-task-[TASK-ID].md` in the `/tasks/` directory.
 
 ## Context
 
 I need a detailed development plan for a specific parent task from the IdeaForge technical implementation plan. The full project context is available in:
 - **project_planning/claude-prd.md** - Complete Product Requirements Document
-- **project_planning/technical-implementation-plan.md** - Overall task breakdown
+- **project_planning/technical-implementation-plan.md** - Overall task breakdown  
 - **project_planning/tech-stack-definition.md** - IMMUTABLE tech stack (never change these technologies)
 - **AGENT-HANDOFF.md** - Current project state
 
 **CRITICAL**: The tech stack defined in tech-stack-definition.md is immutable. All implementation must use exactly these technologies and versions. Do not suggest alternatives or upgrades.
 
-## What I Need
+## Process
 
 Generate a comprehensive development plan for the parent task shown at the bottom of this prompt. The plan should include:
 
@@ -62,11 +62,10 @@ Generate a comprehensive development plan for the parent task shown at the botto
    • API documentation
    • Usage examples
 
-### 8. **Estimated Timeline**
-   • Hours per subtask for a junior developer
-   • Total time estimate
-   • Suggested daily goals
-   • Checkpoint milestones
+### 8. **Functional Requirements**
+   - Numbered list of specific functionalities
+   - Clear, implementation-focused requirements
+   - Technical specifications
 
 ### 9. **Success Metrics**
    • How to measure successful completion
@@ -87,22 +86,30 @@ Generate a comprehensive development plan for the parent task shown at the botto
 - Include actual file paths and function names
 - Reference specific lines from the PRD where applicable
 
-## Special Considerations
 
-Based on the parent task ID, emphasize:
 
-- **Tasks 1-3**: Focus on project setup and foundations
-- **Task 4**: LangGraph is the highest priority - be extra detailed with concrete implementation examples
-- **Tasks 5-6**: n8n integration and AI - include API details and webhook specifications
-- **Tasks 7-8**: Export and refinement - user experience focus and file format examples
-- **Tasks 9-10**: Enhancement and testing - quality focus and test coverage requirements
-- **Tasks 11-12**: Architecture and documentation - future-proofing and maintainability
+### Step 3: Task List Generation
 
-## Output File
+Following the Parent Task Development Plan Request, I will generate detailed task lists using the format from `generate-tasks.mdc`:
 
-Create the output as: `parent-task-[TASK-ID]-plan.md`
-(e.g., `parent-task-4.0-plan.md` for the LangGraph task)
+1. **tasks-parent-[TASK-ID]-checklist.md** - Checkbox list with task codes
+2. **tasks-parent-[TASK-ID]-detailed.md** - Detailed implementation information
 
-Remember to move any previous plan file to `project_planning/retired/` first!
+## Output
 
-## Parent Task to Plan 
+The final output will be saved as:
+- **PRD**: `/tasks/prd-parent-task-[TASK-ID].md`
+- **Checklist**: `/tasks/tasks-parent-[TASK-ID]-checklist.md`
+- **Details**: `/tasks/tasks-parent-[TASK-ID]-detailed.md`
+
+## Target Audience
+
+The primary reader is a **junior developer** implementing their first CLI project. Requirements must be:
+- Explicit and unambiguous
+- Free of unnecessary jargon
+- Include concrete examples
+- Provide clear success criteria
+
+Remember to move any previous *plan*, *checklist* and *detailed* file to `tasks/complete/` first!
+
+## Parent Task to Plan :

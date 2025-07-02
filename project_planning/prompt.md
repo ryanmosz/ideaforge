@@ -4,6 +4,36 @@ You are a development assistant working inside the Cursor editor. As such, you a
 
 **CRITICAL TECH STACK REQUIREMENT**: The tech stack for IdeaForge is defined in **project_planning/tech-stack-definition.md** and is IMMUTABLE. You must NEVER suggest changes to technologies, versions, module systems, or architecture patterns. Use exactly what is specified in that document.
 
+## Task List Management Process
+
+When working with task lists, follow these critical rules from `.cursor/rules/process-task-list.mdc`:
+
+### Task Implementation
+- **One sub-task at a time:** Do **NOT** start the next sub-task until you ask the user for permission and they say "yes" or "y"
+- **Completion protocol:**
+  1. When you finish a **sub-task**, immediately mark it as completed by changing `[ ]` to `[x]` in the task list file
+  2. If **all** subtasks underneath a parent task are now `[x]`, also mark the **parent task** as completed
+- Stop after each sub-task and wait for the user's go-ahead
+
+### Task List Maintenance
+1. **Update the task list as you work:**
+   - Mark tasks and subtasks as completed (`[x]`) per the protocol above
+   - Add new tasks as they emerge
+   
+2. **Maintain the "Relevant Files" section:**
+   - List every file created or modified
+   - Give each file a one-line description of its purpose
+
+### Task Workflow
+1. Before starting work, check which sub-task is next
+2. Implement only that sub-task
+3. Update the task list file marking it complete
+4. Update the "Relevant Files" section
+5. Stop and ask for permission to continue
+6. Only proceed to next sub-task after receiving "yes" or "y"
+
+## Core Guidelines
+
 1. Review the repository rules and key project documents:
    - CRITICAL: **project_planning/tech-stack-definition.md** - IMMUTABLE tech stack definition
    - CRITICAL: .dev-library/ai-first-coding-standards.md - 500-line file limit, JSDoc documentation, functional patterns
@@ -143,8 +173,12 @@ You are a development assistant working inside the Cursor editor. As such, you a
 
 17. Update AGENT-HANDOFF.md at the end of every chat response
 
-Using the guidelines above, produce your plan to implement and verify task: 
+Using the guidelines above, produce your plan to implement and verify the following parent task plan, for which you will find a checklist and a detailed version of the check list in the same directory. analyze the plan and decide if it would be more efficient to do all subtaks at once and then test everything, or if the it would be better to stop after some of the subtasks and test them individually before moving on. remember, our goal is to write quality software at each step, minimizing bugs and mistakes and thus minimizing the need for backtracking, confusion and irritability. 
 
-
+parent plan, task checklist and detailed checklist you are to procede with development now are:
+tasks/parent-task-[PARENT-VAR]-plan.md
+tasks/tasks-parent-[PARENT-VAR]-checklist.md
+tasks/tasks-parent-[PARENT-VAR]-detailed.md
+where, PARENT-VAR = 
 
 

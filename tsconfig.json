@@ -13,8 +13,10 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src/**/*"
@@ -22,6 +24,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts"
+    "tests"
   ]
 }

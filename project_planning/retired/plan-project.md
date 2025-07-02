@@ -1,14 +1,22 @@
-I'm about to start implementing enhancements to the IdeaForge CLI tool. I've done a lot of planning already, which you can see in the project_planning folder and AGENT-HANDOFF.md. The IdeaForge project is a CLI tool that transforms project ideas into actionable plans using MoSCoW and Kano frameworks.
+# IdeaForge Project Development Plan Request
 
-I already have a comprehensive Product Requirements Document at **project_planning/claude-prd.md** that I'm comfortable with. 
+**IMPORTANT**: This prompt follows the development planning process. The output will create planning documents in the `/tasks/` directory.
 
 **CRITICAL**: The tech stack is defined in **project_planning/tech-stack-definition.md** and is IMMUTABLE. Do not suggest any changes to technologies, versions, or architecture patterns. Use exactly what is specified.
 
-What I would like you to do is:
-1. Carefully read the existing PRD at project_planning/claude-prd.md
-2. Review the immutable tech stack at project_planning/tech-stack-definition.md
-3. Review AGENT-HANDOFF.md for current project state
-4. Using the PRD as your primary context and the approved tech stack, produce a complete, actionable development plan that a junior developer—or an implementation-focused AI—can follow to enhance and extend the existing CLI tool according to the PRD specifications.
+## Context
+
+I'm developing the IdeaForge CLI tool - a command-line application that transforms project ideas into actionable plans using MoSCoW and Kano frameworks. 
+
+Key project resources:
+- **project_planning/claude-prd.md** - Existing PRD (for reference)
+- **project_planning/tech-stack-definition.md** - IMMUTABLE tech stack
+- **AGENT-HANDOFF.md** - Current project state
+- **ideaforge-template.org** - Template format users will fill out
+
+## What I Need
+
+Using the PRD as your primary context and the approved tech stack, produce a complete, actionable development plan that a junior developer—or an implementation-focused AI—can follow to enhance and extend the existing CLI tool according to the PRD specifications.
 
 When building the plan, **strictly cover each numbered section**:
 
@@ -75,29 +83,19 @@ When building the plan, **strictly cover each numbered section**:
     • Research spikes needed for LangGraph implementation.
     • Community feedback to gather.
 
-13. **Clarifying Questions**
-    • If any uncertainties remain *after* considering the PRD and provided context, list them here; otherwise write "None outstanding."
+## Formatting Requirements
 
-Formatting rules:
 • Use H2/H3 headings.
 • Tables or code blocks where clarity improves.
 • Keep language concise yet instructional; assume a junior developer audience.
 • All items must be actionable and sequenced logically.
 • Reference the immutable tech stack for all implementation details.
 
-----
-Now based on the format found in generate-tasks.mdc please make me a detailed, granular task list, based on the PRD requirements, tech stack definition, AGENT-HANDOFF.md, 
-and the development plan you just created. Keep in mind that this task list will be completed by a junior developer for 
-their first CLI project. We want to set them up for success, so we have to spell out every step of the way. 
+## Task List Generation
 
-Once a task is completed, we need to test it to the best of our ability to make sure that the work that was just done is complete, 
-appropriate, and without error. So make the individual tasks as granular and straightforward as possible, communicate them in a clear, 
-concise way. 
+After creating the development plan, generate detailed task lists using the format from `generate-tasks.mdc`:
 
-Write this task list out into two different files:
-
-1. **tasks-ideaforge-checklist.md** - Contains the task list with checkboxes, one task per line. Each task will have a 
-   code in the format T101 (first task in parent group one).
+1. **tasks-ideaforge-checklist.md** - Contains the task list with checkboxes, one task per line. Each task will have a code in the format T101 (first task in parent group one).
 
 2. **tasks-ideaforge-detailed.md** - Contains all task codes with detailed information the developer needs:
    - Prerequisites

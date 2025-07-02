@@ -38,6 +38,10 @@ git commit -m "type: description of changes"
 **Usage**: When completing a parent task and transitioning to the next one  
 **Frequency**: Less common (once per parent task)
 
+### Prerequisites:
+1. check tasks/parent-task-1.0-plan.md, tasks/tasks-parent-1.0-checklist.md tasks/tasks-parent-1.0-detailed.md and AGENT-HANDOFF.md to make sure that all tasks are complete for the current task level of the master project_planning/technical-implementation-plan.md that we are about to move on from. if so, move on to the next step, if not STOP IMMEDIATELY and explain the descepancy. this is IMPERATIVE to making sure all steps in the project are complete before moving forward where we will assume they have been completed appropriately.
+2. only if step 0.0 has completed succesfully, mark off tasks completed since last main branch commit in the master checklist at project_planning/technical-implementation-plan.md
+
 ### Command Sequence:
 1. Stage all changes (including new files, modifications, and deletions)
 2. Create a final commit on the current feature branch

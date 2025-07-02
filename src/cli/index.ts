@@ -2,6 +2,27 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { loadConfig } from '../config';
+
+// Try to load config (skip in test mode for help/version commands)
+const isHelpOrVersion = process.argv.some(arg => 
+  arg === '--help' || arg === '-h' || 
+  arg === '--version' || arg === '-V'
+);
+
+if (!isHelpOrVersion) {
+  try {
+    const config = loadConfig();
+    // Config will be used in actual command implementations
+    if (config && process.env.NODE_ENV !== 'test') {
+      console.log(chalk.green('✓ Configuration loaded'));
+    }
+  } catch (error: any) {
+    console.error(chalk.red('Configuration error:'), error.message);
+    console.error(chalk.yellow('Please copy .env.example to .env and fill in required values'));
+    process.exit(1);
+  }
+}
 
 const program = new Command();
 
@@ -52,7 +73,7 @@ program
   .option('--verbose', 'show detailed progress information')
   .option('--quiet', 'suppress all progress messages (errors only)')
   .option('--no-emoji', 'use plain text progress messages without emojis')
-  .action((file, options) => {
+  .action((file, _options) => {
     console.log(chalk.yellow('⚠️  refine command not yet implemented'));
     console.log(chalk.gray(`Would refine: ${file}`));
   });
@@ -73,7 +94,7 @@ program
   .command('tables <file>')
   .description('Extract MoSCoW/Kano tables from analysis file')
   .option('-o, --output <file>', 'output file path (default: stdout)')
-  .action((file, options) => {
+  .action((file, _options) => {
     console.log(chalk.yellow('⚠️  tables command not yet implemented'));
     console.log(chalk.gray(`Would extract tables from: ${file}`));
   });

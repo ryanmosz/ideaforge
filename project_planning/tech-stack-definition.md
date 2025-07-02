@@ -5,7 +5,7 @@
 ## Core Runtime & Language
 
 - **Node.js**: v16.0.0 or higher (LTS versions preferred)
-- **TypeScript**: v5.3.0
+- **TypeScript**: v5.3.3
   - Target: ES2022
   - Module: CommonJS (for Node.js compatibility)
   - Strict mode enabled
