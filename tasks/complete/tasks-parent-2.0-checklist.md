@@ -45,16 +45,16 @@
 
 ## Subtasks
 
-- [x] **T201**: Create TypeScript interfaces for document structure (COMPLETE)
-- [x] **T202**: Implement basic org-mode parser (COMPLETE)
-- [x] **T203**: Create template structure validator (COMPLETE)
-- [x] **T204**: Build data extraction service (COMPLETE)
-- [x] **T205**: Add enhanced tag and property support (COMPLETE)
-- [x] **T206**: Implement response section detection (COMPLETE)
-- [x] **T207**: Add error handling and recovery (COMPLETE)
-- [ ] **T208**: Optimize parser performance (OUT OF SCOPE)
-- [x] **T209**: Create comprehensive test suite (COMPLETE)
-- [x] **T210**: Implement file integration layer (COMPLETE)
+- [x] **T201**: Create TypeScript interfaces for document structure 
+- [x] **T202**: Implement basic org-mode parser 
+- [x] **T203**: Create template structure validator 
+- [x] **T204**: Build data extraction service 
+- [x] **T205**: Add enhanced tag and property support 
+- [x] **T206**: Implement response section detection 
+- [x] **T207**: Add error handling and recovery 
+- [ ] **T208**: Optimize parser performance (DO NOT COMPLETE, OUT OF SCOPE)
+- [x] **T209**: Create comprehensive test suite 
+- [x] **T210**: Implement file integration layer
 
 ## Notes
 
