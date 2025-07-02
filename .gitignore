@@ -33,7 +33,8 @@ yarn-error.log*
 
 # Output files from testing
 analysis-*.org
-tasks-*.md
+# Note: tasks-*.md pattern removed to allow tracking of task planning files
+# If you need to ignore specific generated task files, use more specific patterns
 *.png
 *.svg
 
