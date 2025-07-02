@@ -71,6 +71,15 @@ Brief description of what this project aims to accomplish.
 * Notes
   [Any additional context, constraints, or considerations not covered above.]
 
+* Oustanding Questions and Concerns
+  [Anything you're still unsure about.]
+
+* Additional Research Subjects
+  [List specific topics, technologies, or areas you want the system to research beyond its automatic analysis. These will be included in the next iteration's research phase.]
+  -
+  -
+  -
+
 * Changelog                                                        :CHANGELOG:
   [This section will be maintained by IdeaForge during iterative refinements]
   ** Version History
