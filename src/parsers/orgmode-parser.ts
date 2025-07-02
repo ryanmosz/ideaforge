@@ -13,6 +13,7 @@ import {
   ResponseSection
 } from './orgmode-types';
 import { DocumentMetadata, ChangelogEntry } from '../models/document-types';
+import { OrgParseError, handleParseError } from '../utils/error-handler';
 
 /**
  * Main org-mode parser class
@@ -28,7 +29,7 @@ export class OrgModeParser {
   /** Default parser configuration */
   private readonly config: ParserConfig = {
     continueOnError: true,
-    maxErrors: 10,
+    maxErrors: 50,
     validateStructure: true,
     extractMetadata: true
   };
@@ -43,24 +44,74 @@ export class OrgModeParser {
     const errors: ValidationError[] = [];
     
     try {
+      // Validate input
+      if (!content || typeof content !== 'string') {
+        throw new OrgParseError(
+          'Invalid input: content must be a non-empty string',
+          undefined,
+          undefined,
+          'Provide valid org-mode content to parse'
+        );
+      }
+      
       const lines = this.normalizeLineEndings(content).split('\n');
       
-      // Parse metadata from header
-      const metadata = this.parseMetadata(lines, errors);
+      // Parse with error recovery
+      let metadata: DocumentMetadata;
+      try {
+        metadata = this.parseMetadata(lines, errors);
+      } catch (error) {
+        errors.push(...handleParseError(error));
+        metadata = { title: 'Untitled' };
+        
+        if (!this.config.continueOnError) {
+          return { success: false, errors };
+        }
+      }
       
-      // Parse sections hierarchically
-      const sections = this.parseSections(lines, errors);
+      // Parse sections with error collection
+      let sections: OrgSection[];
+      try {
+        sections = this.parseSections(lines, errors);
+      } catch (error) {
+        errors.push(...handleParseError(error));
+        sections = [];
+        
+        if (!this.config.continueOnError) {
+          return { success: false, errors };
+        }
+      }
       
       // Extract responses if requested
-      const responses = options?.extractResponses 
-        ? this.extractResponses(sections) 
-        : undefined;
+      let responses: ResponseSection[] | undefined;
+      if (options?.extractResponses) {
+        try {
+          responses = this.extractResponses(sections);
+        } catch (error) {
+          errors.push(...handleParseError(error));
+        }
+      }
       
       // Detect version
       const version = this.detectVersion(metadata, content);
       
       // Extract changelog if present
-      const changelog = this.extractChangelog(sections);
+      let changelog: ChangelogEntry[] | undefined;
+      try {
+        changelog = this.extractChangelog(sections);
+      } catch (error) {
+        errors.push(...handleParseError(error));
+      }
+      
+      // Check error threshold
+      if (errors.length > this.config.maxErrors) {
+        errors.push({
+          type: 'parse_error',
+          message: `Too many errors (${errors.length}). Parsing stopped.`,
+          suggestion: 'Fix the most critical errors first, then re-parse'
+        });
+        return { success: false, errors: errors.slice(0, this.config.maxErrors + 1) };
+      }
       
       // Create document
       const document: OrgDocument = {
@@ -73,20 +124,6 @@ export class OrgModeParser {
         responses
       };
       
-      // Check error threshold
-      if (!this.config.continueOnError && errors.length > 0) {
-        return { success: false, errors };
-      }
-      
-      if (errors.length > this.config.maxErrors) {
-        errors.push({
-          type: 'parse_error',
-          message: `Too many errors (${errors.length}). Parsing stopped.`,
-          suggestion: 'Fix the document structure and try again'
-        });
-        return { success: false, errors: errors.slice(0, this.config.maxErrors + 1) };
-      }
-      
       return { 
         success: errors.length === 0, 
         document,
@@ -94,6 +131,7 @@ export class OrgModeParser {
       };
       
     } catch (error) {
+      // Fatal error
       return {
         success: false,
         errors: [{

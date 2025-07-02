@@ -92,16 +92,21 @@ export interface ParseResult {
  * Validation error that prevents or complicates parsing
  */
 export interface ValidationError {
-  /** Type of error */
-  type: 'missing_section' | 'invalid_format' | 'parse_error' | 'invalid_structure';
+  /** Type of validation issue */
+  type: 'missing_section' | 'invalid_format' | 'parse_error' | 'invalid_structure' | 'missing_optional';
+  
   /** Human-readable error message */
   message: string;
-  /** Line number where error occurred */
+  
+  /** Line number where error occurred (if applicable) */
   line?: number;
-  /** Section path where error occurred */
+  
+  /** Section where error occurred */
   section?: string;
-  /** Suggested fix for the error */
+  
+  /** Helpful suggestion for fixing the error */
   suggestion?: string;
+  
   /** Error code for programmatic handling */
   code?: string;
 }

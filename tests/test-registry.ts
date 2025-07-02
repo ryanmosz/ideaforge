@@ -311,6 +311,11 @@ export const testRegistry: TestDefinition[] = [
   'parser-data-extraction': './parsers/data-extraction.test.ts',
   'parser-enhanced-tags': './parsers/enhanced-tags.test.ts',
   'parser-response-detection': './parsers/response-detection.test.ts',
+  'parser-error-handling': './parsers/error-handling.test.ts',
+  'parser-comprehensive': './parsers/comprehensive.test.ts',
+  
+  // Utils tests
+  'utils-error-handler': './utils/error-handler.test.ts',
 ];
 
 /**
