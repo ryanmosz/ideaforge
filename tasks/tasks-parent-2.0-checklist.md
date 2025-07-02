@@ -1,3 +1,5 @@
+# Parent Task 2.0 - Task Checklist
+
 ## Relevant Files
 
 - `src/parsers/orgmode-parser.ts` - Main parser implementation for org-mode files (✅ Created)
@@ -14,6 +16,7 @@
 - `src/utils/orgmode-helpers.test.ts` - Unit tests for helpers
 - `ideaforge-template.org` - The org-mode template to parse
 - `tests/parsers/basic-parser.test.ts` - Basic functionality tests for Phase 1 (✅ Created)
+- `tests/parsers/validator.test.ts` - Validator tests
 
 ### Notes
 
@@ -28,7 +31,7 @@
 - [ ] 2.0 Implement org-mode parsing and file handling
   - [x] T201 Create TypeScript interfaces and data models
   - [x] T202 Implement basic org-mode parser
-  - [ ] T203 Implement template structure validator
+  - [x] T203 Implement template structure validator
   - [ ] T204 Build data extraction for specific sections
   - [ ] T205 Handle :RESPONSE: tag recognition
   - [ ] T206 Create file versioning system

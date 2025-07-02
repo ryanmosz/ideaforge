@@ -271,7 +271,9 @@ export class OrgModeParser {
   private parseTags(tagString: string, line: number, errors: ValidationError[]): string[] {
     try {
       // Remove surrounding colons and split
-      const tags = tagString.slice(1, -1).split(':').filter(t => t);
+      const tags = tagString.slice(1, -1).split(':')
+        .map(t => t.trim()) // Trim spaces from each tag
+        .filter(t => t); // Filter out empty strings
       
       // Validate each tag
       for (const tag of tags) {
