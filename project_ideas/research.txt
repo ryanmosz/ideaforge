@@ -1,0 +1,32 @@
+My apologies that the document didn't load correctly. I'll provide the high-level steps for building your Electron app directly here.
+
+Here is a roadmap for building your Reddit and Hacker News research app on a Mac.
+
+### Phase 1: Project Setup and Foundation
+
+1.  **Install Tools:** Ensure you have Node.js and npm installed on your Mac.
+2.  **Create the Electron Project:** Use the official **Electron Forge** tool to create a modern project structure. In your terminal, run:
+    `npm init electron-app@latest my-research-app -- --template=webpack`
+3.  **Understand the Structure:** Get familiar with the two parts of an Electron app:
+    * **Main Process:** The app's backend (runs in Node.js). This is where you'll fetch data from the Reddit and Hacker News APIs.
+    * **Renderer Process:** The app's frontend (a browser window). This is where you'll build the user interface with HTML/CSS/JS to display the posts.
+
+### Phase 2: Building the User Interface (The "Renderer")
+
+4.  **Choose a UI Framework:** While you can use plain HTML/CSS, using a framework like **React** will make it much easier to display the data. The template from Step 2 is already set up for this.
+5.  **Design the Layout:** Create the visual components. A simple layout would include a sidebar for your sources (e.g., "Hacker News," "r/science") and a main area to list the posts.
+
+### Phase 3: Fetching the Data (The "Main" Process)
+
+6.  **Write API Logic:** In the **Main process**, write the code to fetch the top posts from your chosen subreddits and the top stories from Hacker News.
+7.  **Send Data to UI:** Use Electron's built-in **Inter-Process Communication (IPC)** to send the fetched data from the Main process (backend) to the Renderer process (frontend) so it can be displayed.
+
+### Phase 4: Storing Data
+
+8.  **Implement Persistence:** To save the fetched posts and your settings (like the list of subreddits), use a simple storage package like `electron-store`. This will save your data to a JSON file automatically, so it's there when you reopen the app.
+
+### Phase 5: Packaging for macOS
+
+9.  **Build Your Application:** When you're ready, use Electron Forge to package your project into a standard Mac `.app` file that you can run and share. The command is simple: `npm run make`.
+
+This breaks the project down into manageable steps. I hope this is more accessible!
