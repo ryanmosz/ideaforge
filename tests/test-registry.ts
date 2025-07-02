@@ -303,7 +303,14 @@ export const testRegistry: TestDefinition[] = [
     estimatedTime: 2,
     enabled: true,
     debugInfo: 'Tests loadConfig() with various .env configurations, defaults, edge cases'
-  }
+  },
+
+  // Parser tests
+  'parser-basic': './parsers/basic-parser.test.ts',
+  'parser-validation': './parsers/validator.test.ts',
+  'parser-data-extraction': './parsers/data-extraction.test.ts',
+  'parser-enhanced-tags': './parsers/enhanced-tags.test.ts',
+  'parser-response-detection': './parsers/response-detection.test.ts',
 ];
 
 /**

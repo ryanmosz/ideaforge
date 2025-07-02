@@ -23,6 +23,7 @@ export class OrgModeParser {
   private readonly PROPERTY_REGEX = /^#\+(\w+):\s*(.*)$/;
   private readonly PROPERTY_DRAWER_START = /^:PROPERTIES:$/;
   private readonly PROPERTY_DRAWER_END = /^:END:$/;
+  private readonly DRAWER_PROPERTY_REGEX = /^:(\w+):\s*(.*)$/;
 
   /** Default parser configuration */
   private readonly config: ParserConfig = {
@@ -187,9 +188,18 @@ export class OrgModeParser {
       }
       
       if (inPropertyDrawer) {
-        const propMatch = trimmed.match(/^:(\w+):\s*(.*)$/);
+        const propMatch = trimmed.match(this.DRAWER_PROPERTY_REGEX);
         if (propMatch) {
-          currentProperties[propMatch[1]] = propMatch[2];
+          const [, key, value] = propMatch;
+          currentProperties[key] = value;
+        } else if (trimmed !== '') {
+          // Invalid line in property drawer
+          errors.push({
+            type: 'invalid_format',
+            message: 'Invalid property format in drawer',
+            line: i + 1,
+            suggestion: 'Properties should be in format ":KEY: value"'
+          });
         }
         continue;
       }
@@ -240,11 +250,26 @@ export class OrgModeParser {
           sectionStack.pop();
         }
         
-        // Add to parent or root
-        if (sectionStack.length === 0) {
-          sections.push(section);
+        // Apply tag inheritance
+        if (sectionStack.length > 0) {
+          const parent = sectionStack[sectionStack.length - 1].section;
+          // Inherit tags that are marked as inheritable (custom logic can be added)
+          const inheritableTags = parent.tags.filter(tag => 
+            !['RESPONSE', 'CHANGELOG'].includes(tag) // Don't inherit these special tags
+          );
+          
+          // Add inherited tags that aren't already present
+          inheritableTags.forEach(tag => {
+            if (!section.tags.includes(tag)) {
+              section.tags.push(tag);
+            }
+          });
+          
+          // Add to parent's children
+          parent.children.push(section);
         } else {
-          sectionStack[sectionStack.length - 1].section.children.push(section);
+          // Top-level section
+          sections.push(section);
         }
         
         // Add to stack
@@ -266,28 +291,57 @@ export class OrgModeParser {
   }
 
   /**
-   * Parse org-mode tags from tag string
+   * Parse org-mode tags from tag string with enhanced validation
    */
   private parseTags(tagString: string, line: number, errors: ValidationError[]): string[] {
     try {
-      // Remove surrounding colons and split
-      const tags = tagString.slice(1, -1).split(':')
-        .map(t => t.trim()) // Trim spaces from each tag
-        .filter(t => t); // Filter out empty strings
+      // Check for common mistakes first
+      if (tagString.includes(' :') || tagString.includes(': ')) {
+        errors.push({
+          type: 'invalid_format',
+          message: 'Tags should not have spaces around colons',
+          line,
+          suggestion: 'Use :TAG1:TAG2: format without spaces'
+        });
+      }
+      
+      // Remove outer colons and split by ':'
+      const tagContent = tagString.trim();
+      if (!tagContent.startsWith(':') || !tagContent.endsWith(':')) {
+        errors.push({
+          type: 'invalid_format',
+          message: 'Tags must be enclosed in colons',
+          line,
+          suggestion: 'Use :TAG1:TAG2: format'
+        });
+        return [];
+      }
+      
+      // Remove leading and trailing colons, then split
+      const innerContent = tagContent.slice(1, -1);
+      if (!innerContent) {
+        return [];
+      }
+      
+      // Split by colon to get individual tags
+      const tags = innerContent.split(':').filter(tag => tag.length > 0);
       
       // Validate each tag
-      for (const tag of tags) {
-        if (!/^[A-Za-z0-9_-]+$/.test(tag)) {
+      const validTags: string[] = [];
+      tags.forEach(tag => {
+        if (/^[A-Za-z0-9_@#%\-]+$/.test(tag)) {
+          validTags.push(tag);
+        } else {
           errors.push({
             type: 'invalid_format',
             message: `Invalid tag format: "${tag}"`,
             line,
-            suggestion: 'Tags should only contain letters, numbers, hyphens, and underscores'
+            suggestion: 'Tags should only contain letters, numbers, and special chars (@#%_-)'
           });
         }
-      }
+      });
       
-      return tags;
+      return validTags;
     } catch (error) {
       errors.push({
         type: 'parse_error',
@@ -299,17 +353,17 @@ export class OrgModeParser {
   }
 
   /**
-   * Extract response sections marked with :RESPONSE: tag
+   * Extract response sections from the document
    */
   private extractResponses(sections: OrgSection[]): ResponseSection[] {
     const responses: ResponseSection[] = [];
     
     const collectResponses = (sectionList: OrgSection[], parentPath: string = '') => {
       for (const section of sectionList) {
-        if (section.isResponse && section.tags.includes('RESPONSE')) {
+        if (section.tags.includes('RESPONSE')) {
           const response: ResponseSection = {
             ...section,
-            isResponse: true,
+            isResponse: true as const,
             targetSection: this.inferTargetSection(section, parentPath),
             responseContent: section.content
           };
@@ -325,17 +379,19 @@ export class OrgModeParser {
     collectResponses(sections);
     return responses;
   }
-
+  
   /**
    * Infer which section a response is targeting
    */
   private inferTargetSection(response: OrgSection, parentPath: string): string {
-    // Patterns for identifying target
+    // Try to infer what section this response is about
+    // Look for patterns like "Re: Requirements" or "About User Stories"
     const patterns = [
       /^Re:\s*(.+)/i,
       /^About\s+(.+)/i,
       /^Regarding\s+(.+)/i,
       /^For\s+(.+)/i,
+      /^On\s+(.+)/i,
       /^Response to\s+(.+)/i
     ];
     
@@ -346,10 +402,10 @@ export class OrgModeParser {
       }
     }
     
-    // Default to parent section path
+    // If no pattern matches, use parent section
     return parentPath || 'General';
   }
-
+  
   /**
    * Detect document version from metadata or changelog
    */
@@ -360,13 +416,49 @@ export class OrgModeParser {
     }
     
     // Look for version in changelog
-    const changelogMatch = content.match(/\*+\s+Changelog.*?\n.*?-\s*v(\d+)/is);
+    const changelogMatch = content.match(/\*+\s+Changelog.*?\n.*?v?(\d+(?:\.\d+)*)/is);
     if (changelogMatch) {
       return `v${changelogMatch[1]}`;
     }
     
-    // Default to v1
+    // Default
     return 'v1';
+  }
+  
+  /**
+   * Check if document has any response sections
+   */
+  hasResponses(document: OrgDocument): boolean {
+    return (document.responses?.length || 0) > 0;
+  }
+  
+  /**
+   * Get all responses targeting a specific section
+   */
+  getResponsesForSection(document: OrgDocument, sectionHeading: string): ResponseSection[] {
+    if (!document.responses) return [];
+    
+    return document.responses.filter(response => 
+      response.targetSection?.toLowerCase() === sectionHeading.toLowerCase()
+    );
+  }
+  
+  /**
+   * Get all response sections grouped by target
+   */
+  getResponsesByTarget(document: OrgDocument): Map<string, ResponseSection[]> {
+    const responseMap = new Map<string, ResponseSection[]>();
+    
+    if (!document.responses) return responseMap;
+    
+    for (const response of document.responses) {
+      const target = response.targetSection || 'General';
+      const existing = responseMap.get(target) || [];
+      existing.push(response);
+      responseMap.set(target, existing);
+    }
+    
+    return responseMap;
   }
 
   /**
@@ -447,5 +539,48 @@ export class OrgModeParser {
     }
     
     return undefined;
+  }
+
+  /**
+   * Find all sections with a specific tag (including inherited tags)
+   */
+  findSectionsByTag(sections: OrgSection[], tag: string): OrgSection[] {
+    const results: OrgSection[] = [];
+    
+    const searchSections = (sectionList: OrgSection[]) => {
+      for (const section of sectionList) {
+        if (section.tags.includes(tag)) {
+          results.push(section);
+        }
+        searchSections(section.children);
+      }
+    };
+    
+    searchSections(sections);
+    return results;
+  }
+
+  /**
+   * Get all unique tags in the document
+   */
+  getAllTags(sections: OrgSection[]): string[] {
+    const tagSet = new Set<string>();
+    
+    const collectTags = (sectionList: OrgSection[]) => {
+      for (const section of sectionList) {
+        section.tags.forEach(tag => tagSet.add(tag));
+        collectTags(section.children);
+      }
+    };
+    
+    collectTags(sections);
+    return Array.from(tagSet).sort();
+  }
+
+  /**
+   * Extract custom properties from a section
+   */
+  getSectionProperties(section: OrgSection): Record<string, string> {
+    return section.properties || {};
   }
 } 

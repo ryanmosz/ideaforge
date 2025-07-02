@@ -149,3 +149,4 @@ if (process.argv.length === 2) {
   // Parse arguments normally
   program.parse(process.argv);
 }
+// Test comment

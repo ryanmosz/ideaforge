@@ -36,8 +36,8 @@
   - [x] T202 Implement basic org-mode parser
   - [x] T203 Implement template structure validator
   - [x] T204 Build data extraction for specific sections
-  - [ ] T205 Handle :RESPONSE: tag recognition
-  - [ ] T206 Create file versioning system
+  - [x] T205 Handle :RESPONSE: tag recognition
+  - [x] T206 Create file versioning system
   - [ ] T207 Implement error handling and recovery
   - [ ] T208 Optimize parser performance
   - [ ] T209 Write comprehensive unit tests
@@ -49,8 +49,8 @@
 - [x] T202: Create basic org-mode parser for metadata and sections
 - [x] T203: Implement template structure validator
 - [x] T204: Build data extraction for specific sections (Requirements, Technology, etc.)
-- [ ] T205: Add support for org-mode tags and properties
-- [ ] T206: Implement response section detection for refinement tracking
+- [x] T205: Add support for org-mode tags and properties
+- [x] T206: Implement response section detection for refinement tracking
 - [ ] T207: Create error handling and recovery mechanisms
 - [ ] T208: Build file reading and writing utilities
 - [ ] T209: Add comprehensive test suite for parser

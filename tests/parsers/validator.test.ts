@@ -261,7 +261,7 @@ Some stories
 
 ** Functional Requirements
 
-*** Login system :MUST: :SHOULD:
+*** Login system :MUST:SHOULD:
 
 Too many tags!
 

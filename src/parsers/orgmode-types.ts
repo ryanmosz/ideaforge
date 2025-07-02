@@ -6,57 +6,72 @@
 import { DocumentMetadata, ChangelogEntry } from '../models/document-types';
 
 /**
- * Represents a hierarchical section in an org-mode document
+ * Represents a section in an org-mode document with full context
  */
 export interface OrgSection {
-  /** Heading level (1 = *, 2 = **, etc.) */
+  /** Section level (1 = *, 2 = **, etc.) */
   level: number;
-  /** Section heading text (without stars and tags) */
+  
+  /** Section heading text */
   heading: string;
-  /** Content under this heading (before any subsections) */
+  
+  /** Section content (everything after heading until next section) */
   content: string;
-  /** Org-mode tags (e.g., :MUST:, :RESPONSE:, :CHANGELOG:) */
+  
+  /** Tags attached to this section */
   tags: string[];
+  
   /** Child sections */
   children: OrgSection[];
-  /** Org-mode properties drawer content */
-  properties?: Record<string, string>;
-  /** Line number where this section starts (for error reporting) */
-  lineNumber: number;
-  /** Whether this section has the :RESPONSE: tag */
+  
+  /** Line number where this section starts */
+  lineNumber?: number;
+  
+  /** Whether this section has :RESPONSE: tag */
   isResponse?: boolean;
+  
+  /** Properties defined in :PROPERTIES: drawer */
+  properties?: Record<string, string>;
 }
 
 /**
- * Main org-mode document structure
- */
-export interface OrgDocument {
-  /** Document title (from metadata or first heading) */
-  title: string;
-  /** All metadata from document header */
-  metadata: DocumentMetadata;
-  /** Top-level sections in the document */
-  sections: OrgSection[];
-  /** Document version (from metadata or changelog) */
-  version: string;
-  /** Parsed changelog entries */
-  changelog?: ChangelogEntry[];
-  /** Original raw content (for reference) */
-  raw: string;
-  /** Extracted response sections for refinement */
-  responses?: ResponseSection[];
-}
-
-/**
- * A section marked with :RESPONSE: tag
+ * Represents a response section marked with :RESPONSE: tag
  */
 export interface ResponseSection extends OrgSection {
   /** Always true for response sections */
   isResponse: true;
-  /** The section this response is targeting */
+  
+  /** Which section this response targets */
   targetSection?: string;
+  
   /** The response content */
   responseContent: string;
+}
+
+/**
+ * Complete parsed org-mode document
+ */
+export interface OrgDocument {
+  /** Document title from #+TITLE: */
+  title: string;
+  
+  /** All metadata from document header */
+  metadata: DocumentMetadata;
+  
+  /** Hierarchical section structure */
+  sections: OrgSection[];
+  
+  /** Document version (from metadata or changelog) */
+  version?: string;
+  
+  /** Changelog entries if present */
+  changelog?: ChangelogEntry[];
+  
+  /** Original raw content */
+  raw: string;
+  
+  /** Collected response sections */
+  responses?: ResponseSection[];
 }
 
 /**
