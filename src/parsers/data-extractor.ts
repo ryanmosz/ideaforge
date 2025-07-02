@@ -76,18 +76,36 @@ export class DataExtractor {
           rawText: `${storySection.heading}\n${storySection.content}`.trim()
         });
       } else {
-        // Try to extract from content if heading doesn't match
-        const contentMatch = storySection.content.match(
-          /As\s+a\s+(.+?),\s*I\s+want\s+(.+?)(?:\s+so\s+that\s+(.+?))?\.?$/is
-        );
-        
-        if (contentMatch) {
-          stories.push({
-            role: contentMatch[1].trim(),
-            action: contentMatch[2].trim(),
-            benefit: contentMatch[3]?.trim() || '',
-            rawText: `${storySection.heading}\n${storySection.content}`.trim()
-          });
+        // Check if heading starts with "As a" and content has "I want"
+        const headingMatch = storySection.heading.match(/^As\s+a\s+(.+?)$/i);
+        if (headingMatch && storySection.content) {
+          // Try to extract the rest from content
+          const contentMatch = storySection.content.match(
+            /I\s+want\s+(.+?)(?:\s+[Ss]o\s+that\s+(.+?))?$/is
+          );
+          
+          if (contentMatch) {
+            stories.push({
+              role: headingMatch[1].trim(),
+              action: contentMatch[1].trim(),
+              benefit: contentMatch[2]?.trim() || '',
+              rawText: `${storySection.heading}\n${storySection.content}`.trim()
+            });
+          }
+        } else {
+          // Try to extract from content if heading doesn't match
+          const contentMatch = storySection.content.match(
+            /As\s+a\s+(.+?),\s*I\s+want\s+(.+?)(?:\s+so\s+that\s+(.+?))?\.?$/is
+          );
+          
+          if (contentMatch) {
+            stories.push({
+              role: contentMatch[1].trim(),
+              action: contentMatch[2].trim(),
+              benefit: contentMatch[3]?.trim() || '',
+              rawText: `${storySection.heading}\n${storySection.content}`.trim()
+            });
+          }
         }
       }
     });

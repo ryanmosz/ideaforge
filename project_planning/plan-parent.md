@@ -77,6 +77,60 @@ Generate a comprehensive development plan for the parent task shown at the botto
    • Which parent tasks should follow
    • Future enhancement opportunities
 
+## Testing Procedure Requirements
+
+**CRITICAL**: Every task implementation MUST follow this testing procedure:
+
+### For Each Subtask:
+1. **Create Test Files First**
+   - Write comprehensive test files BEFORE or ALONGSIDE implementation
+   - Test files go in `/tests/` mirroring the `/src/` structure
+   - Include both positive and negative test cases
+   - Test edge cases and error conditions
+
+2. **Verify Tests Pass**
+   - Run `npm test` after implementing each subtask
+   - ALL tests must pass before moving to the next task
+   - Fix any failing tests immediately
+   - Never skip or comment out failing tests
+
+3. **Test Coverage Requirements**
+   - Each new function/method needs at least one test
+   - Critical logic needs multiple test scenarios
+   - Error handling paths must be tested
+   - Integration points need specific tests
+
+4. **Manual Testing When Appropriate**
+   - Create temporary test scripts for complex features
+   - Document manual testing steps performed
+   - Clean up temporary test files after verification
+   - Note any manual tests that should become automated tests
+
+5. **Test File Naming**
+   - Match source file names: `feature.ts` → `feature.test.ts`
+   - Use descriptive test names that explain what's being tested
+   - Group related tests in describe blocks
+
+### Example Test Implementation:
+```typescript
+// For a parser in src/parsers/data-extractor.ts
+// Create tests/parsers/data-extractor.test.ts
+
+describe('DataExtractor', () => {
+  describe('extractUserStories', () => {
+    it('should extract well-formed user stories', () => {
+      // Test implementation
+    });
+    
+    it('should handle missing components gracefully', () => {
+      // Test error cases
+    });
+  });
+});
+```
+
+**IMPORTANT**: If you're picking up work from a previous agent, always run `npm test` first to understand the current state. Never assume tests are passing.
+
 ## Formatting Requirements
 
 - Use clear markdown formatting

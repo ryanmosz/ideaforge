@@ -164,5 +164,12 @@ export interface ExportResult {
   /** Error message if failed */
   error?: string;
   /** Export format used */
-  format: 'markdown' | 'json' | 'orgmode';
-} 
+  format: ExportFormat;
+  /** Statistics about the exported content */
+  statistics?: Record<string, number>;
+}
+
+/**
+ * Supported export formats
+ */
+export type ExportFormat = 'markdown' | 'json' | 'orgmode' | 'cursor'; 
