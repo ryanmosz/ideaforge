@@ -305,17 +305,105 @@ export const testRegistry: TestDefinition[] = [
     debugInfo: 'Tests loadConfig() with various .env configurations, defaults, edge cases'
   },
 
-  // Parser tests
-  'parser-basic': './parsers/basic-parser.test.ts',
-  'parser-validation': './parsers/validator.test.ts',
-  'parser-data-extraction': './parsers/data-extraction.test.ts',
-  'parser-enhanced-tags': './parsers/enhanced-tags.test.ts',
-  'parser-response-detection': './parsers/response-detection.test.ts',
-  'parser-error-handling': './parsers/error-handling.test.ts',
-  'parser-comprehensive': './parsers/comprehensive.test.ts',
+  // ===== Parser Tests (T201-T210) =====
+  {
+    id: 'parser.basic',
+    name: 'Basic Org-mode Parser',
+    description: 'Verifies basic org-mode parsing functionality',
+    type: 'jest',
+    path: 'tests/parsers/basic-parser.test.ts',
+    groups: ['unit', 'parser'],
+    tags: ['t202', 'parser'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests metadata extraction, section parsing, tag handling'
+  },
+  {
+    id: 'parser.validation',
+    name: 'Template Structure Validator',
+    description: 'Verifies org-mode template validation',
+    type: 'jest',
+    path: 'tests/parsers/validator.test.ts',
+    groups: ['unit', 'parser'],
+    tags: ['t203', 'parser', 'validation'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests required sections, MoSCoW tags, template structure'
+  },
+  {
+    id: 'parser.data-extraction',
+    name: 'Data Extraction Service',
+    description: 'Verifies data extraction from parsed org documents',
+    type: 'jest',
+    path: 'tests/parsers/data-extraction.test.ts',
+    groups: ['unit', 'parser'],
+    tags: ['t204', 'parser', 'extraction'],
+    estimatedTime: 3,
+    enabled: true,
+    debugInfo: 'Tests user story extraction, requirements parsing, brainstorming ideas'
+  },
+  {
+    id: 'parser.enhanced-tags',
+    name: 'Enhanced Tag Support',
+    description: 'Verifies enhanced tag and property drawer support',
+    type: 'jest',
+    path: 'tests/parsers/enhanced-tags.test.ts',
+    groups: ['unit', 'parser'],
+    tags: ['t205', 'parser', 'tags'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests property drawers, tag inheritance, custom tag characters'
+  },
+  {
+    id: 'parser.response-detection',
+    name: 'Response Section Detection',
+    description: 'Verifies response section detection for iterative refinement',
+    type: 'jest',
+    path: 'tests/parsers/response-detection.test.ts',
+    groups: ['unit', 'parser'],
+    tags: ['t206', 'parser', 'response'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests :RESPONSE: tag detection, target section inference'
+  },
+  {
+    id: 'parser.error-handling',
+    name: 'Parser Error Handling',
+    description: 'Verifies parser error handling and recovery',
+    type: 'jest',
+    path: 'tests/parsers/error-handling.test.ts',
+    groups: ['unit', 'parser', 'error-handling'],
+    tags: ['t207', 'parser', 'errors'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests error recovery, input validation, error messages'
+  },
+  {
+    id: 'parser.comprehensive',
+    name: 'Comprehensive Parser Tests',
+    description: 'Comprehensive test suite for parser edge cases and performance',
+    type: 'jest',
+    path: 'tests/parsers/comprehensive.test.ts',
+    groups: ['integration', 'parser'],
+    tags: ['t209', 'parser', 'comprehensive'],
+    estimatedTime: 5,
+    enabled: true,
+    debugInfo: 'Tests edge cases, Unicode, performance, real-world scenarios'
+  },
   
-  // Utils tests
-  'utils-error-handler': './utils/error-handler.test.ts',
+  // ===== Utils Tests =====
+  {
+    id: 'utils.error-handler',
+    name: 'Error Handler Utilities',
+    description: 'Verifies error handling utility functions',
+    type: 'jest',
+    path: 'tests/utils/error-handler.test.ts',
+    groups: ['unit', 'utils'],
+    tags: ['t207', 'utils', 'error-handling'],
+    estimatedTime: 2,
+    enabled: true,
+    debugInfo: 'Tests custom error types, error formatting, user messages'
+  }
 ];
 
 /**

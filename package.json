@@ -15,6 +15,9 @@
     "test:current": "ts-node tests/test-runner.ts --current",
     "test:all": "ts-node tests/test-runner.ts --all",
     "test:list": "ts-node tests/test-runner.ts --list",
+    "test:task": "ts-node tests/test-runner.ts --task",
+    "test:group": "ts-node tests/test-runner.ts --group",
+    "type-check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "prepare": "npm run build"
   },
