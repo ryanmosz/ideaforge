@@ -33,7 +33,7 @@
 - [x] 4.1 Set up LangGraph project structure
 - [x] 4.2 Define ProjectState TypeScript schema
 - [ ] 4.3 Create core analysis nodes:
-  - [ ] 4.3.1 DocumentParserNode - Parse org-mode structure  
+  - [x] 4.3.1 DocumentParserNode - Parse org-mode structure  
   - [ ] 4.3.2 RequirementsAnalysisNode - Understand project goals
   - [ ] 4.3.3 MoscowCategorizationNode - Apply MoSCoW framework
   - [ ] 4.3.4 KanoEvaluationNode - Assess user value

@@ -569,7 +569,9 @@ Create the comprehensive state schema that flows through all LangGraph nodes.
 - ✅ Utility functions implemented
 - ✅ 100% test coverage for state module
 
-## Task 4.3.1: DocumentParserNode - Parse org-mode structure
+## Task 4.3: Create core analysis nodes
+
+### 4.3.1 DocumentParserNode - Parse org-mode structure ✓
 
 ### Objective
 Create the first analysis node that integrates with the existing org-mode parser.
