@@ -8,6 +8,8 @@ import { CommandContext } from './types';
 import { BaseCommand } from './commands/base-command';
 import { AnalyzeCommand } from './commands/analyze';
 import { ExportCommand } from './commands/export';
+import { RefineCommand } from './commands/refine';
+import { VisualizeCommand } from './commands/visualize';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -54,7 +56,7 @@ const context: CommandContext = {
 
 // Only check config if we have a known command that requires it
 const args = process.argv.slice(2);
-const knownCommands = ['analyze', 'refine', 'export', 'flow', 'tables', 'init'];
+const knownCommands = ['analyze', 'refine', 'export', 'visualize', 'init'];
 const firstArg = args[0];
 const hasCommand = firstArg && !firstArg.startsWith('-') && knownCommands.includes(firstArg);
 const hasHelpFlag = args.includes('--help') || args.includes('-h');
@@ -76,6 +78,8 @@ if (hasCommand && !hasHelpFlag) {
 const commands: BaseCommand[] = [
   new AnalyzeCommand(context),
   new ExportCommand(context),
+  new RefineCommand(context),
+  new VisualizeCommand(context),
   // TODO: Add other commands here
 ];
 
@@ -87,27 +91,6 @@ program
   .description('Create a new IdeaForge template file')
   .action(() => {
     console.log(chalk.blue('Coming soon:'), 'Initialize template functionality');
-  });
-
-program
-  .command('refine')
-  .description('Refine your analysis with feedback')
-  .action(() => {
-    console.log(chalk.blue('Coming soon:'), 'Refinement functionality');
-  });
-
-program
-  .command('flow')
-  .description('Generate architecture flow diagram')
-  .action(() => {
-    console.log(chalk.blue('Coming soon:'), 'Flow diagram functionality');
-  });
-
-program
-  .command('tables')
-  .description('Extract MoSCoW/Kano tables')
-  .action(() => {
-    console.log(chalk.blue('Coming soon:'), 'Table extraction functionality');
   });
 
 // Custom help with examples
@@ -125,7 +108,7 @@ program.on('--help', () => {
   console.log('  $ ideaforge refine analysis.org --output analysis-v2.org');
   console.log('');
   console.log('  # Generate architecture flow diagram');
-  console.log('  $ ideaforge flow analysis-final.org --format svg --output architecture.svg');
+  console.log('  $ ideaforge visualize flow analysis-final.org --format svg');
   console.log('');
   console.log('  # Export final plan for development');
   console.log('  $ ideaforge export analysis-final.org --format cursor --output tasks.md');

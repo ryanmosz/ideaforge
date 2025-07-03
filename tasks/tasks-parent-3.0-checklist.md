@@ -4,9 +4,9 @@
 
 - [x] **3.1** Implement main CLI entry point with Commander.js
 - [x] **3.2** Create analyze command for initial processing
-- [ ] **3.3** Create refine command for iterative improvements
+- [x] **3.3** Create refine command for iterative improvements
 - [x] **3.4** Create export command with format options
-- [ ] **3.5** Create visualization commands for diagrams and tables
+- [x] **3.5** Create visualization commands for diagrams and tables
 - [x] **3.6** Implement progress messaging system
 
 Implementation Order: 3.6 → 3.1 → 3.2 → 3.4 → 3.3 → 3.5
