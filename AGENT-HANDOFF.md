@@ -1,14 +1,14 @@
 # AGENT HANDOFF - IdeaForge Project Status
 
 ## Project Overview
-IdeaForge is a CLI tool for transforming project ideas into actionable plans using MoSCoW prioritization and Kano model analysis.
+IdeaForge is a CLI tool for transforming project ideas into actionable plans using MoSCoW prioritization and Kano model analysis, powered by LangGraph AI agents.
 
 ## Current State
-- **Branch**: `feature/task-3.0-cli-framework`
-- **Parent Task**: 3.0 - Build CLI Framework and Command Structure
-- **Status**: ✅ COMPLETE - All subtasks implemented
-- **Prerequisites**: ✅ Parent Tasks 1.0 and 2.0 COMPLETE
-- **Tests**: ✅ All 254 tests passing
+- **Branch**: `feature/task-4.0-langgraph`
+- **Parent Task**: 4.0 - Implement LangGraph Agent Architecture
+- **Status**: ✅ COMPLETE - All subtasks implemented (32/32 tasks)
+- **Prerequisites**: ✅ Parent Tasks 1.0, 2.0, and 3.0 COMPLETE
+- **Tests**: ✅ All 483 tests passing
 
 ## What's Been Built So Far
 
@@ -38,52 +38,63 @@ IdeaForge is a CLI tool for transforming project ideas into actionable plans usi
 - **3.5**: Visualize command stubs - placeholders for future features
 - **Total**: 254 tests passing (55 new tests added)
 
+### Parent Task 4.0: Implement LangGraph Agent Architecture ✅ COMPLETE
+- **4.1**: LangGraph project structure with TypeScript support
+- **4.2**: ProjectState schema with comprehensive typing
+- **4.3**: Core analysis nodes (DocumentParser, RequirementsAnalysis, MoscowCategorization, KanoEvaluation, DependencyAnalysis)
+- **4.4**: Research nodes (TechnologyExtraction, HackerNewsSearch, RedditSearch, AdditionalResearch, ResearchSynthesis)
+- **4.5**: Refinement nodes (ResponseProcessing, FeedbackIntegration, ChangelogGeneration)
+- **4.6**: Graph edges with conditional routing
+- **4.7**: State persistence using LangGraph's MemorySaver and SessionManager
+- **4.8**: AgentRunner service integrating CLI with LangGraph (analyze/refine methods, progress streaming, interruption handling)
+- **Total**: 483 tests passing (229 new tests added)
+
 ## Architecture Overview
 
 ```
-User → CLI Command → BaseCommand → FileHandler → Parser → Validator → DataExtractor
-                         ↓                                                      ↓
-                  ProgressManager                                      ProcessedData
-                         ↓                                                      ↓
-          Rich feedback with timestamps                               Export/Save Results
+User → CLI Command → BaseCommand → AgentRunner → LangGraph → AI Nodes
+                         ↓              ↓             ↓          ↓
+                  ProgressManager  SessionManager  State    Analysis
+                         ↓              ↓             ↓          ↓
+          Rich feedback w/progress  Persistence  Memory    Results
 ```
 
-### Key Components
+### Key Components Added in Task 4.0
 
-1. **BaseCommand** (`src/cli/commands/base-command.ts`)
-   - Abstract base class for all commands
-   - Provides `createProgress()` and `handleError()` methods
-   - Manages shared CommandContext
+1. **AgentRunner** (`src/services/agent-runner.ts`)
+   - Bridge between CLI and LangGraph
+   - Methods: analyze(), refine()
+   - Progress event streaming
+   - Interruption handling (SIGINT/SIGTERM)
+   - Session management
 
-2. **CommandContext** (`src/cli/types.ts`)
-   - Shared services: FileHandler, ProgressManager, ErrorHandler
-   - Passed to all command constructors
+2. **LangGraph Components**
+   - **ProjectState**: Comprehensive state schema
+   - **Analysis Nodes**: 5 core nodes for document analysis
+   - **Research Nodes**: 5 nodes for external research
+   - **Refinement Nodes**: 3 nodes for feedback processing
+   - **Routing**: Conditional edges for workflow control
 
-3. **ProgressManager** (`src/cli/progress-manager.ts`)
-   - Verbose by default with timestamps and elapsed time
-   - Methods: start(), update(), succeed(), fail(), warn(), info(), stop()
-   - Uses ora for spinner animations
+3. **Persistence Layer**
+   - **SessionManager**: Creates/retrieves analysis sessions
+   - **MemorySaver**: LangGraph checkpointer for state persistence
+   - Session IDs based on file paths for consistency
 
-4. **VersionHelper** (`src/utils/version-helper.ts`)
-   - Auto-versioning for refined files
-   - extractVersion() and generateVersionedPath()
+4. **AI Integration**
+   - Each node uses OpenAI for intelligent processing
+   - Prompts optimized for specific tasks
+   - Streaming responses for real-time feedback
 
-5. **Commands**:
-   - **AnalyzeCommand**: Processes org-mode files, extracts data
-   - **ExportCommand**: Converts between formats (cursor/orgmode)
-   - **RefineCommand**: Processes :RESPONSE: tags, auto-versions output
-   - **VisualizeCommand**: Stub for future flow/tables generation
-
-## Available CLI Commands
+## Available CLI Commands (Now AI-Powered)
 
 ```bash
-# Analyze org-mode file
-./bin/ideaforge analyze <file> [--output <path>]
+# Analyze org-mode file with AI
+./bin/ideaforge analyze <file> [--output <path>] [--fresh]
 
-# Export to different formats
+# Export to different formats (includes AI insights)
 ./bin/ideaforge export <file> [--format cursor|orgmode] [--output <path>]
 
-# Refine with feedback (requires :RESPONSE: tags)
+# Refine with AI feedback processing
 ./bin/ideaforge refine <file> [--output <path>]
 
 # Visualization stubs (v2.0 features)
@@ -91,50 +102,50 @@ User → CLI Command → BaseCommand → FileHandler → Parser → Validator �
 ./bin/ideaforge visualize tables <file> [--output <path>]
 ```
 
-## Next Parent Task: 4.0 - Implement LangGraph Agent Architecture
+## Next Parent Task: 5.0 - Develop n8n Integration for External APIs
 
-### What Task 4.0 Will Do
-- Create the AI intelligence layer using LangGraph
-- Build nodes for document analysis, MoSCoW/Kano evaluation
-- Implement research nodes for external data gathering
-- Create refinement nodes for processing :RESPONSE: tags
-- Set up graph edges and conditional routing
-- Integrate with existing CLI commands
+### What Task 5.0 Will Do
+- Create n8n workflows for external API integrations
+- Implement webhook endpoints for research nodes
+- Set up API connectors for HackerNews, Reddit, and custom sources
+- Create data transformation pipelines
+- Add caching and rate limiting
+- Integrate with existing research nodes
 
 ### Key Integration Points
-- Analyze command will use LangGraph for intelligent analysis
-- Refine command will process :RESPONSE: tags through LangGraph
-- Export command will include AI-generated insights
-- All AI processing will show progress via ProgressManager
+- Research nodes will call n8n webhooks instead of direct APIs
+- n8n will handle authentication, rate limiting, and caching
+- Results will be transformed and returned to LangGraph
+- Error handling and retries managed by n8n
 
-### Prerequisites for Task 4.0
-- ✅ CLI framework complete (Task 3.0)
-- ✅ Org-mode parsing infrastructure (Task 2.0)
-- ✅ File I/O and error handling (Tasks 1.0 & 2.0)
-- Need: OpenAI API key configured
-- Need: LangGraph/LangChain dependencies
+### Prerequisites for Task 5.0
+- ✅ LangGraph agent architecture complete (Task 4.0)
+- ✅ Research nodes implemented (Task 4.4)
+- Need: n8n instance running
+- Need: N8N_WEBHOOK_URL configured
+- Need: API keys for external services
 
 ## Development Guidelines
 
 ### Testing Requirements
-- All 254 tests currently passing
+- All 483 tests currently passing
 - Test coverage maintained above 80%
 - New features require tests before implementation
 
 ### Git Workflow
-- Current branch: `feature/task-3.0-cli-framework`
-- Ready to merge to main and create `feature/task-4.0-langgraph`
+- Current branch: `feature/task-4.0-langgraph`
+- Ready to merge to main and create `feature/task-5.0-n8n-integration`
 - Use conventional commits (feat:, fix:, docs:, etc.)
 
 ### File Limits
 - All files under 500 lines (enforced by ESLint)
-- Largest file: tests/cli/commands/refine.test.ts (220 lines)
+- Largest files properly modularized
 
 ## Environment Setup
 ```bash
 # Required for full functionality
-OPENAI_API_KEY=your_key
-N8N_WEBHOOK_URL=your_webhook_url  # For Task 5.0
+OPENAI_API_KEY=your_key          # Currently used
+N8N_WEBHOOK_URL=your_webhook_url  # Needed for Task 5.0
 
 # Test the CLI
 npm run build
@@ -145,25 +156,24 @@ npm run build
 ## Testing the Current Implementation
 ```bash
 # Run all tests
-npm test  # 254 tests pass
+npm test  # 483 tests pass
 
 # Build and test CLI
 npm run build
 ./bin/ideaforge --version  # 1.0.0
 
-# Test analyze command
+# Test AI-powered analyze
 ./bin/ideaforge analyze ideaforge-template.org
 
-# Test export command
+# Test export with AI insights
 ./bin/ideaforge export ideaforge-results.org --format cursor
 
-# Test refine (needs :RESPONSE: tags)
-./bin/ideaforge refine analysis.org  # Auto-versions to analysis-v2.org
+# Test AI-powered refine
+./bin/ideaforge refine analysis.org  # Processes :RESPONSE: tags with AI
 
-# Test visualization stubs
-./bin/ideaforge visualize flow diagram.org
-./bin/ideaforge visualize tables data.org
+# Test interruption (Ctrl+C during analysis)
+./bin/ideaforge analyze large-file.org  # Press Ctrl+C to test graceful shutdown
 ```
 
 ---
-*Parent Task 3.0 complete. Ready to merge to main and begin Task 4.0 - LangGraph implementation.*
+*Parent Task 4.0 complete. Ready to merge to main and begin Task 5.0 - n8n integration.*

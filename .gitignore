@@ -40,3 +40,7 @@ analysis-*.org
 
 # OS files
 Thumbs.db
+
+# IdeaForge state files
+.ideaforge/
+.test-ideaforge-state/

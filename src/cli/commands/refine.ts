@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 import { BaseCommand } from './base-command';
 import { VersionHelper } from '../../utils/version-helper';
-import * as path from 'path';
 import { AIModel, AI_MODELS } from '../../config';
+import { AgentRunner } from '../../services/agent-runner';
+import { ProgressEvent, RefinementResult } from '../../types/agent-runner.types';
 
 export class RefineCommand extends BaseCommand {
   register(program: Command): void {
@@ -24,88 +25,144 @@ export class RefineCommand extends BaseCommand {
     const progress = this.createProgress();
     
     try {
-      // Validate and set AI model
+      // Validate model
       if (options.model && !AI_MODELS[options.model as AIModel]) {
         throw new Error(`Invalid model: ${options.model}. Valid options are: ${Object.keys(AI_MODELS).join(', ')}`);
       }
       
-      // Set the model in environment for this execution
-      if (options.model) {
-        process.env.AI_MODEL = options.model;
-      }
+      // Create agent runner
+      const agentRunner = new AgentRunner(this.fileHandler);
       
-      // Start progress
-      progress.start('📄 Reading org-mode file with responses...');
-      const data = await this.fileHandler.readOrgFile(file);
+      // Connect progress events
+      agentRunner.on('progress', (event: ProgressEvent) => {
+        if (event.level === 'error') {
+          progress.fail(event.message);
+        } else if (event.level === 'warning') {
+          progress.warn(event.message);
+        } else {
+          progress.update(event.message);
+        }
+      });
       
-      // Count :RESPONSE: tags
-      const responseCount = this.countResponseTags(data);
-      progress.update(`🔍 Found ${responseCount} :RESPONSE: section${responseCount !== 1 ? 's' : ''}`);
+      // Handle interruption
+      let interrupted = false;
       
-      if (responseCount === 0) {
-        progress.warn('⚠️  No :RESPONSE: tags found. Add feedback using :RESPONSE: tags and try again.');
-        return;
-      }
+      const handleInterrupt = async () => {
+        if (interrupted) return;
+        interrupted = true;
+        
+        console.log('\n'); // New line for clean output
+        progress.update('🛑 Gracefully stopping refinement...');
+        
+        try {
+          await agentRunner.interrupt();
+          progress.warn('⚠️  Refinement interrupted - partial results may be saved');
+        } catch (error) {
+          progress.fail('❌ Failed to stop gracefully');
+        }
+        
+        // Give time for cleanup
+        setTimeout(() => {
+          process.exit(1);
+        }, 2000);
+      };
       
-      // Process responses (stub for now)
-      progress.update('🔄 Processing feedback...');
-      await this.processResponses(data);
+      process.once('SIGINT', handleInterrupt);
+      process.once('SIGTERM', handleInterrupt);
+      
+      // Ensure cleanup on exit
+      process.once('beforeExit', () => {
+        process.removeListener('SIGINT', handleInterrupt);
+        process.removeListener('SIGTERM', handleInterrupt);
+      });
+      
+      // Start refinement
+      progress.start('🔄 Starting refinement with user feedback...');
+      
+      const result = await agentRunner.refine(file, {
+        modelName: options.model
+      });
+      
+      // Clean up
+      process.removeListener('SIGINT', handleInterrupt);
+      process.removeListener('SIGTERM', handleInterrupt);
       
       // Generate output path
-      const outputPath = options.output || VersionHelper.generateVersionedPath(file);
+      const outputPath = options.output || 
+        VersionHelper.generateVersionedPath(file, result.refinementIteration);
       
-      // Save refined version
-      progress.update('💾 Saving refined version...');
-      await this.fileHandler.writeDocument(data, outputPath, 'orgmode');
+      // Save results
+      progress.update('💾 Saving refined analysis...');
       
-      // Show info about next iteration
-      progress.info(`Next iteration: Add :RESPONSE: tags to ${path.basename(outputPath)} for further refinement`);
+      // Convert to ParsedDocumentData format for compatibility
+      const exportData = {
+        metadata: result.metadata || {
+          title: 'IdeaForge Analysis',
+          author: 'IdeaForge AI',
+          date: new Date().toISOString()
+        },
+        projectOverview: result.researchSynthesis || '',
+        userStories: result.userStories,
+        requirements: result.requirements,
+        brainstormIdeas: result.brainstormIdeas,
+        questionsAnswers: result.questionsAnswers,
+        
+        // Enhanced results from LangGraph
+        moscowAnalysis: result.moscowAnalysis,
+        kanoAnalysis: result.kanoAnalysis,
+        dependencies: result.dependencies,
+        suggestions: result.suggestions,
+        alternativeIdeas: result.alternativeIdeas,
+        
+        // Refinement specific
+        changelog: result.changelog,
+        refinementIteration: result.refinementIteration,
+        changesApplied: result.changesApplied,
+        
+        // Fields required by ParsedDocumentData but not in results
+        technologyChoices: [],
+        notes: [],
+        questions: [],
+        researchSubjects: [],
+        
+        // Metadata for compatibility
+        validationScore: 100,
+        parsingErrors: []
+      } as any;
       
-      progress.succeed(`✅ Refinement complete! Saved to: ${outputPath}`);
+      await this.fileHandler.writeDocument(exportData, outputPath, 'orgmode');
       
-    } catch (error) {
-      progress.fail('❌ Refinement failed');
+      // Success
+      progress.succeed(`✅ Refinement complete! Results saved to: ${outputPath}`);
+      
+      // Show refinement summary
+      this.showRefinementSummary(result);
+      
+    } catch (error: any) {
+      if (error.message.includes('interrupted')) {
+        progress.warn('⚠️  Refinement was interrupted');
+      } else if (error.message.includes('No previous analysis')) {
+        progress.fail('❌ No previous analysis found');
+        console.error('\n💡 Tip: Run "ideaforge analyze" on this file first\n');
+      } else {
+        progress.fail('❌ Refinement failed');
+      }
       this.handleError(error);
     }
   }
   
-  private countResponseTags(data: any): number {
-    let count = 0;
+  private showRefinementSummary(result: RefinementResult): void {
+    console.log('\n🔄 Refinement Summary:');
+    console.log(`   • Iteration: #${result.refinementIteration}`);
+    console.log(`   • Changes Applied: ${result.changesApplied.length}`);
     
-    // Helper function to traverse sections
-    const traverseSection = (section: any) => {
-      if (!section) return;
-      
-      // Check if this section has RESPONSE tag
-      if (section.tags && Array.isArray(section.tags)) {
-        if (section.tags.includes('RESPONSE')) {
-          count++;
-        }
-      }
-      
-      // Traverse subsections
-      if (section.subsections && Array.isArray(section.subsections)) {
-        section.subsections.forEach(traverseSection);
-      }
-    };
-    
-    // Start traversal from root sections
-    if (data.sections && Array.isArray(data.sections)) {
-      data.sections.forEach(traverseSection);
+    if (result.changesApplied.length > 0) {
+      console.log('\n📝 Changes:');
+      result.changesApplied.forEach(change => {
+        console.log(`   • ${change}`);
+      });
     }
     
-    return count;
-  }
-  
-  private async processResponses(_data: any): Promise<void> {
-    // Stub for Task 4.0 - LangGraph integration
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // In the future, this will:
-    // 1. Extract :RESPONSE: content
-    // 2. Send to LangGraph for processing
-    // 3. Apply refinements to the document
-    // 4. Update MoSCoW/Kano scores based on feedback
+    console.log(`\n⏱️  Refinement completed in ${(result.executionTime / 1000).toFixed(1)}s\n`);
   }
 } 

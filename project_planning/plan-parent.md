@@ -12,6 +12,16 @@ I need a detailed development plan for a specific parent task from the IdeaForge
 
 **CRITICAL**: The tech stack defined in tech-stack-definition.md is immutable. All implementation must use exactly these technologies and versions. Do not suggest alternatives or upgrades.
 
+## Using Internal Documentation
+
+**IMPORTANT**: Before implementing any task, consult the **Internal Documentation Guide** at `.cursor/rules/custom/internal-docs-guide.mdc`. This guide provides:
+- Complete list of all indexed documentation (TypeScript, Jest, Commander.js, LangGraph, etc.)
+- How to effectively query internal docs instead of using web search
+- Code examples and best practices for each technology
+- Version-specific information matching our dependencies
+
+**Always prefer internal documentation over web searches** - it's faster, more accurate, and version-matched to our project.
+
 ## Process
 
 Generate a comprehensive development plan for the parent task shown at the bottom of this prompt. The plan should include:
@@ -167,3 +177,7 @@ The primary reader is a **junior developer** implementing their first CLI projec
 Remember to move any previous *plan*, *checklist* and *detailed* file to `tasks/complete/` first!
 
 ## Parent Task to Plan :
+
+## 4.0 LANGGRAPH AGENT INTEGRATION 🚀 [COMPLETE] ✅
+
+**Goal:** Build an intelligent conversation agent using LangGraph that handles the entire analysis workflow

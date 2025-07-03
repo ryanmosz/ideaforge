@@ -1,23 +1,15 @@
 // Graph construction - connects all nodes with edges and routing logic
 
-import { StateGraph, END } from '@langchain/langgraph';
-import { ProjectState } from './state';
-import { stateChannels } from './state-annotations';
-import { 
-  checkForResponses, 
-  routeAfterResearch, 
-  routeAfterChangelog, 
-  checkForErrors,
-  getFlowMap 
-} from './edges/routing';
-
-// Import all nodes
-import { DocumentParserNode } from './nodes/DocumentParserNode';
-import { RequirementsAnalysisNode } from './nodes/RequirementsAnalysisNode';
-import { MoscowCategorizationNode } from './nodes/MoscowCategorizationNode';
-import { KanoEvaluationNode } from './nodes/KanoEvaluationNode';
-import { DependencyAnalysisNode } from './nodes/DependencyAnalysisNode';
-import { 
+import { StateGraph } from '@langchain/langgraph';
+import { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
+import {
+  DocumentParserNode,
+  RequirementsAnalysisNode,
+  MoscowCategorizationNode,
+  KanoEvaluationNode,
+  DependencyAnalysisNode
+} from './nodes';
+import {
   TechnologyExtractionNode,
   HackerNewsSearchNode,
   RedditSearchNode,
@@ -29,129 +21,155 @@ import {
   FeedbackIntegrationNode,
   ChangelogGenerationNode
 } from './nodes/refinement';
+import { ProjectState } from './state';
+import { stateChannels } from './state-annotations';
+import { ProgressManager } from '../cli/progress-manager';
+import { shouldSearchReddit, shouldSearchHackerNews, shouldPerformAdditionalResearch } from './edges/routing';
 
-export function buildIdeaForgeGraph() {
-  const graph = new StateGraph<ProjectState>({
-    channels: stateChannels
-  });
-  
-  // Initialize all nodes
+/**
+ * Builds the IdeaForge LangGraph workflow
+ * @param progressManager - Optional progress manager for CLI integration
+ * @param checkpointer - Optional checkpoint saver for state persistence
+ * @param modelName - Optional AI model name
+ * @returns Compiled LangGraph workflow
+ */
+export function buildIdeaForgeGraph(
+  _progressManager?: ProgressManager,
+  checkpointer?: BaseCheckpointSaver,  
+  _modelName?: string
+): any {  // Temporarily return any to avoid type issues
+  // Create nodes
   const documentParser = new DocumentParserNode();
   const requirementsAnalysis = new RequirementsAnalysisNode();
   const moscowCategorization = new MoscowCategorizationNode();
   const kanoEvaluation = new KanoEvaluationNode();
   const dependencyAnalysis = new DependencyAnalysisNode();
+  
+  // Research nodes
   const technologyExtraction = new TechnologyExtractionNode();
   const hackerNewsSearch = new HackerNewsSearchNode();
   const redditSearch = new RedditSearchNode();
   const additionalResearch = new AdditionalResearchNode();
   const researchSynthesis = new ResearchSynthesisNode();
+  
+  // Refinement nodes
   const responseProcessing = new ResponseProcessingNode();
   const feedbackIntegration = new FeedbackIntegrationNode();
   const changelogGeneration = new ChangelogGenerationNode();
   
-  // Add all nodes to the graph (bind process methods)
-  graph.addNode('documentParser' as any, documentParser.invoke.bind(documentParser));
-  graph.addNode('requirementsAnalysis' as any, requirementsAnalysis.invoke.bind(requirementsAnalysis));
-  graph.addNode('moscowCategorization' as any, moscowCategorization.invoke.bind(moscowCategorization));
-  graph.addNode('kanoEvaluation' as any, kanoEvaluation.invoke.bind(kanoEvaluation));
-  graph.addNode('dependencyAnalysis' as any, dependencyAnalysis.invoke.bind(dependencyAnalysis));
-  graph.addNode('technologyExtraction' as any, technologyExtraction.invoke.bind(technologyExtraction));
-  graph.addNode('hackerNewsSearch' as any, hackerNewsSearch.process.bind(hackerNewsSearch));
-  graph.addNode('redditSearch' as any, redditSearch.process.bind(redditSearch));
-  graph.addNode('additionalResearch' as any, additionalResearch.process.bind(additionalResearch));
-  graph.addNode('researchSynthesisNode' as any, researchSynthesis.process.bind(researchSynthesis));
-  graph.addNode('responseProcessing' as any, responseProcessing.process.bind(responseProcessing));
-  graph.addNode('feedbackIntegration' as any, feedbackIntegration.process.bind(feedbackIntegration));
-  graph.addNode('changelogGeneration' as any, changelogGeneration.process.bind(changelogGeneration));
+  // Create the graph
+  const graph = new StateGraph<ProjectState>({
+    channels: stateChannels
+  });
   
-  // Set entry point
-  graph.setEntryPoint('documentParser' as any);
+  // Add nodes
+  graph.addNode('documentParser', async (state) => documentParser.invoke(state));
+  graph.addNode('requirementsAnalysis', async (state) => requirementsAnalysis.invoke(state));
+  graph.addNode('moscowCategorization', async (state) => moscowCategorization.invoke(state));
+  graph.addNode('kanoEvaluation', async (state) => kanoEvaluation.invoke(state));
+  graph.addNode('dependencyAnalysis', async (state) => dependencyAnalysis.invoke(state));
   
-  // Define edges - main analysis flow
+  // Research nodes
+  graph.addNode('technologyExtraction', async (state) => technologyExtraction.invoke(state));
+  graph.addNode('hackerNewsSearch', async (state) => hackerNewsSearch.process(state));
+  graph.addNode('redditSearch', async (state) => redditSearch.process(state));
+  graph.addNode('additionalResearch', async (state) => additionalResearch.process(state));
+  graph.addNode('researchSynthesisNode', async (state) => researchSynthesis.process(state));
+  
+  // Refinement nodes
+  graph.addNode('responseProcessing', async (state) => responseProcessing.process(state));
+  graph.addNode('feedbackIntegration', async (state) => feedbackIntegration.process(state));
+  graph.addNode('changelogGeneration', async (state) => changelogGeneration.process(state));
+  
+  // Define flow with conditional edges
+  // Start from documentParser
+  graph.addEdge('__start__' as any, 'documentParser' as any);
   graph.addEdge('documentParser' as any, 'requirementsAnalysis' as any);
   graph.addEdge('requirementsAnalysis' as any, 'moscowCategorization' as any);
   graph.addEdge('moscowCategorization' as any, 'kanoEvaluation' as any);
   graph.addEdge('kanoEvaluation' as any, 'dependencyAnalysis' as any);
   graph.addEdge('dependencyAnalysis' as any, 'technologyExtraction' as any);
   
+  // Conditional research edges
+  graph.addConditionalEdges(
+    'technologyExtraction' as any,
+    async (state) => {
+      if (shouldSearchHackerNews(state)) {
+        return 'hackerNewsSearch';
+      }
+      if (shouldSearchReddit(state)) {
+        return 'redditSearch';
+      }
+      if (shouldPerformAdditionalResearch(state)) {
+        return 'additionalResearch';
+      }
+      return 'researchSynthesisNode';
+    },
+    {
+      hackerNewsSearch: 'hackerNewsSearch' as any,
+      redditSearch: 'redditSearch' as any,
+      additionalResearch: 'additionalResearch' as any,
+      researchSynthesisNode: 'researchSynthesisNode' as any
+    }
+  );
+  
   // Research flow
-  graph.addEdge('technologyExtraction' as any, 'hackerNewsSearch' as any);
-  graph.addEdge('hackerNewsSearch' as any, 'redditSearch' as any);
-  graph.addEdge('redditSearch' as any, 'additionalResearch' as any);
+  graph.addConditionalEdges(
+    'hackerNewsSearch' as any,
+    async (state) => {
+      if (shouldSearchReddit(state)) {
+        return 'redditSearch';
+      }
+      if (shouldPerformAdditionalResearch(state)) {
+        return 'additionalResearch';
+      }
+      return 'researchSynthesisNode';
+    },
+    {
+      redditSearch: 'redditSearch' as any,
+      additionalResearch: 'additionalResearch' as any,
+      researchSynthesisNode: 'researchSynthesisNode' as any
+    }
+  );
+  
+  graph.addConditionalEdges(
+    'redditSearch' as any,
+    async (state) => {
+      if (shouldPerformAdditionalResearch(state)) {
+        return 'additionalResearch';
+      }
+      return 'researchSynthesisNode';
+    },
+    {
+      additionalResearch: 'additionalResearch' as any,
+      researchSynthesisNode: 'researchSynthesisNode' as any
+    }
+  );
+  
   graph.addEdge('additionalResearch' as any, 'researchSynthesisNode' as any);
   
-  // Conditional routing after research synthesis
+  // Check for refinement after research
   graph.addConditionalEdges(
     'researchSynthesisNode' as any,
-    routeAfterResearch,
+    async (state) => {
+      if (state.userResponses && state.userResponses.length > 0) {
+        return 'responseProcessing';
+      }
+      return '__end__';
+    },
     {
-      'feedbackIntegration': 'feedbackIntegration' as any,
-      'END': END
+      responseProcessing: 'responseProcessing' as any,
+      __end__: '__end__' as any
     }
   );
   
-  // Refinement flow routing
-  graph.addConditionalEdges(
-    'documentParser' as any,
-    checkForResponses,
-    {
-      'responseProcessing': 'responseProcessing' as any,
-      'requirementsAnalysis': 'requirementsAnalysis' as any
-    }
-  );
+  // Add finish node (LangGraph handles END internally)
   
-  // Response processing flow
+  // Refinement flow
   graph.addEdge('responseProcessing' as any, 'feedbackIntegration' as any);
   graph.addEdge('feedbackIntegration' as any, 'changelogGeneration' as any);
+  graph.addEdge('changelogGeneration' as any, '__end__' as any);
   
-  // After changelog, re-run analysis with updated state
-  graph.addConditionalEdges(
-    'changelogGeneration' as any,
-    routeAfterChangelog,
-    {
-      'requirementsAnalysis': 'requirementsAnalysis' as any,
-      'END': END
-    }
-  );
-  
-  // Error recovery paths
-  // Each node can set errors in state, and we check for them
-  const errorCheckNodes = [
-    'documentParser',
-    'requirementsAnalysis',
-    'moscowCategorization',
-    'kanoEvaluation',
-    'dependencyAnalysis',
-    'technologyExtraction',
-    'hackerNewsSearch',
-    'redditSearch',
-    'additionalResearch',
-    'researchSynthesisNode',
-    'responseProcessing',
-    'feedbackIntegration',
-    'changelogGeneration'
-  ];
-  
-  // Add error handling for critical nodes
-  const flowMap = getFlowMap();
-  
-  errorCheckNodes.forEach(nodeName => {
-    // Skip nodes that already have conditional edges or don't have a next node
-    if (nodeName !== 'changelogGeneration' && 
-        nodeName !== 'researchSynthesisNode' && 
-        nodeName !== 'documentParser' &&
-        flowMap[nodeName]) {
-      graph.addConditionalEdges(
-        nodeName as any,
-        checkForErrors,
-        {
-          'END': END,
-          'CONTINUE': flowMap[nodeName] as any
-        }
-      );
-    }
-  });
-  
-  return graph.compile();
+  // Compile the graph with checkpointer if provided
+  return graph.compile({ checkpointer });
 } 

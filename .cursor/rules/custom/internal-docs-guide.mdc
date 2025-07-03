@@ -1,0 +1,219 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Internal Documentation Guide
+
+// Description: Guide to utilizing internally indexed documentation for better code generation
+// Recommended Globs: **/*.{js,jsx,ts,tsx,py,html,css,json,md}
+
+## Overview
+
+This guide documents all internally indexed documentation available in Cursor and provides examples of how to effectively use them instead of web searches. Using internal docs is significantly faster and provides version-specific information.
+
+## Available Internal Documentation
+
+Based on the screenshot and verification, the following documentation is indexed and accessible:
+
+### Core Technologies
+1. **TypeScript** - Language documentation
+2. **Node.js** - Runtime and API documentation
+3. **npm** - Package management documentation
+
+### Framework & Libraries
+4. **Commander.js** - CLI framework documentation
+5. **Axios** - HTTP client documentation
+6. **LangGraph** - Agent orchestration framework
+7. **n8n** - Workflow automation platform
+8. **Elestio** - Hosting platform
+
+### Testing & Development
+9. **Jest** - Testing framework documentation
+10. **ESLint** - Linting documentation
+
+### Utilities
+11. **Chalk** - Terminal styling library
+12. **Ora** - Loading spinner library
+
+### Documentation & Standards
+13. **Org mode** - Org-mode syntax and features
+14. **Conventional Commits** - Commit message standards
+15. **Markdown Guide** - Markdown syntax reference
+
+## How to Use Internal Docs Effectively
+
+### 1. Use Semantic Search for Concepts
+Instead of searching for exact function names, ask about concepts:
+
+**Good Examples:**
+- "How to create CLI commands with Commander.js?"
+- "How to write unit tests with Jest?"
+- "How to make HTTP requests with Axios?"
+- "How to use LangGraph nodes and edges?"
+
+**Less Effective:**
+- "commander"
+- "jest.fn()"
+- "axios.get"
+
+### 2. Ask Implementation Questions
+The internal docs can answer "how to" questions effectively:
+
+**Examples:**
+- "How to handle TypeScript async functions?"
+- "How to set up Jest with TypeScript?"
+- "How to create a LangGraph state machine?"
+- "How to style terminal output with Chalk?"
+
+### 3. Version-Specific Information
+Internal docs often contain version-specific information that's more reliable than web search:
+
+**Examples:**
+- "What's the correct Commander.js syntax for option parsing?"
+- "How to configure Jest for TypeScript projects?"
+- "What are the LangGraph state channel patterns?"
+
+## Examples of Effective Internal Doc Usage
+
+### Example 1: Creating a CLI Command
+```typescript
+// Ask: "How to create CLI commands with Commander.js?"
+// Internal docs will show current syntax:
+import { Command } from 'commander';
+
+const program = new Command();
+program
+  .name('myapp')
+  .description('My CLI application')
+  .version('1.0.0');
+
+program
+  .command('analyze <file>')
+  .description('Analyze a file')
+  .option('-o, --output <path>', 'output path')
+  .action(async (file, options) => {
+    // Implementation
+  });
+```
+
+### Example 2: Writing Tests
+```typescript
+// Ask: "How to write unit tests with Jest?"
+// Internal docs provide TypeScript-specific examples:
+describe('MyComponent', () => {
+  let service: MyService;
+  
+  beforeEach(() => {
+    service = new MyService();
+  });
+  
+  it('should process data correctly', async () => {
+    const result = await service.process('test');
+    expect(result).toEqual({ success: true });
+  });
+});
+```
+
+### Example 3: HTTP Requests
+```typescript
+// Ask: "How to make HTTP requests with Axios?"
+// Get current best practices:
+import axios from 'axios';
+
+try {
+  const response = await axios.get('/api/data', {
+    params: { id: 123 },
+    headers: { 'Authorization': 'Bearer token' }
+  });
+  console.log(response.data);
+} catch (error) {
+  if (axios.isAxiosError(error)) {
+    console.error('Request failed:', error.response?.data);
+  }
+}
+```
+
+### Example 4: LangGraph Implementation
+```typescript
+// Ask: "How to use LangGraph nodes and edges?"
+// Get framework-specific patterns:
+import { StateGraph } from '@langchain/langgraph';
+
+const graph = new StateGraph<MyState>({
+  channels: stateChannels
+});
+
+graph.addNode('parser', async (state) => {
+  // Node implementation
+  return { parsed: true };
+});
+
+graph.addEdge('parser', 'analyzer');
+```
+
+## Best Practices
+
+### 1. Prefer Internal Docs Over Web Search
+- Internal docs are faster to access
+- Version-specific and accurate for your dependencies
+- No network latency
+
+### 2. Use for Common Patterns
+- Creating CLI commands
+- Writing tests
+- Making HTTP requests
+- Styling terminal output
+- Managing npm packages
+
+### 3. Combine Multiple Docs
+When implementing features, reference multiple relevant docs:
+- Building a CLI? Use Commander.js + Chalk + Ora docs
+- Writing tests? Use Jest + TypeScript docs
+- Making API calls? Use Axios + TypeScript docs
+
+### 4. Check for Project-Specific Patterns
+Some documentation may include patterns specific to certain use cases:
+- Org-mode for document parsing
+- Conventional commits for version control
+- LangGraph for agent architectures
+
+## Common Use Cases
+
+### CLI Development
+- Commander.js: Command structure, options, arguments
+- Chalk: Color output, styling
+- Ora: Progress indicators
+- Node.js: File system, process management
+
+### Testing
+- Jest: Test structure, mocking, assertions
+- TypeScript: Type-safe testing
+
+### API Integration
+- Axios: HTTP requests, error handling
+- n8n: Webhook integration
+- Node.js: Async patterns
+
+### Documentation
+- Markdown: README files, documentation
+- Org-mode: Structured documents
+- Conventional Commits: Change tracking
+
+## Tips for Future Agents
+
+1. **Always check internal docs first** before using web search
+2. **Ask specific questions** about implementation rather than searching for function names
+3. **Look for examples** in the documentation responses
+4. **Cross-reference** multiple docs when implementing complex features
+5. **Note version-specific** information that might differ from general web results
+
+## Debugging Documentation Access
+
+If documentation doesn't seem accessible:
+1. Try rephrasing your question more specifically
+2. Include the technology name in your query
+3. Ask about concepts rather than specific APIs
+4. Use questions like "How to..." or "What is the correct way to..."
+
+Remember: Internal documentation is version-matched to the project's dependencies, making it more reliable than general web searches for implementation details.

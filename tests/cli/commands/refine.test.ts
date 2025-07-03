@@ -1,16 +1,31 @@
 import { RefineCommand } from '../../../src/cli/commands/refine';
 import { CommandContext } from '../../../src/cli/types';
 import { Command } from 'commander';
+import { AgentRunner } from '../../../src/services/agent-runner';
+import { EventEmitter } from 'events';
+import { RefinementResult } from '../../../src/types/agent-runner.types';
+
+// Mock AgentRunner
+jest.mock('../../../src/services/agent-runner');
 
 describe('RefineCommand', () => {
   let command: RefineCommand;
   let mockContext: CommandContext;
   let program: Command;
   let consoleErrorSpy: jest.SpyInstance;
+  let consoleLogSpy: jest.SpyInstance;
+  let mockAgentRunner: jest.Mocked<AgentRunner>;
+  let exitSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    // Spy on console.error to suppress output during tests
+    // Spy on console to suppress output during tests
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    // Mock process.exit to prevent Jest worker failures
+    exitSpy = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+      throw new Error(`Process exited with code ${code}`);
+    });
     
     mockContext = {
       fileHandler: {
@@ -32,12 +47,23 @@ describe('RefineCommand', () => {
       }
     } as any;
     
+    // Create mock AgentRunner instance
+    mockAgentRunner = new EventEmitter() as any;
+    mockAgentRunner.refine = jest.fn();
+    mockAgentRunner.interrupt = jest.fn();
+    
+    // Mock the AgentRunner constructor
+    (AgentRunner as jest.MockedClass<typeof AgentRunner>).mockImplementation(() => mockAgentRunner);
+    
     command = new RefineCommand(mockContext);
     program = new Command();
   });
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+    exitSpy.mockRestore();
+    jest.clearAllMocks();
   });
 
   it('should register refine command', () => {
@@ -48,119 +74,132 @@ describe('RefineCommand', () => {
   });
 
   describe('execute', () => {
-    const mockOrgDataWithResponses = {
-      metadata: { title: 'Test Project' },
-      sections: [
+    const mockRefinementResult: RefinementResult = {
+      requirements: [{ 
+        id: 'R1', 
+        title: 'Updated requirement', 
+        description: 'Refined based on feedback',
+        moscowCategory: 'must' as const
+      }],
+      userStories: [{ 
+        id: 'US1',
+        actor: 'user', 
+        action: 'refine', 
+        benefit: 'better results' 
+      }],
+      brainstormIdeas: [{ 
+        id: 'B1',
+        category: 'feature', 
+        title: 'Refined idea',
+        description: 'Updated based on feedback'
+      }],
+      questionsAnswers: [],
+      moscowAnalysis: {
+        must: [{ id: '1', category: 'requirement', title: 'Must have', description: 'Updated' }],
+        should: [],
+        could: [],
+        wont: []
+      },
+      kanoAnalysis: {
+        basic: [],
+        performance: [],
+        excitement: []
+      },
+      dependencies: [],
+      suggestions: [],
+      alternativeIdeas: [],
+      sessionId: 'test-session',
+      executionTime: 2000,
+      nodesExecuted: ['responseProcessing', 'feedbackIntegration', 'changelogGeneration'],
+      changelog: [
         {
-          level: 1,
-          title: 'User Stories',
-          tags: [],
-          subsections: [
-            {
-              level: 2,
-              title: 'Story 1',
-              tags: ['RESPONSE'],
-              content: 'User feedback here'
-            }
-          ]
-        },
-        {
-          level: 1,
-          title: 'Requirements',
-          tags: ['RESPONSE'],
-          content: 'Requirement feedback'
+          version: 'v2',
+          timestamp: new Date(),
+          changes: ['Updated requirements based on feedback', 'Refined user stories'],
+          responsesProcessed: 2
         }
-      ]
+      ],
+      refinementIteration: 2,
+      changesApplied: ['Updated requirements based on feedback', 'Refined user stories']
     };
 
-    const mockOrgDataNoResponses = {
-      metadata: { title: 'Test Project' },
-      sections: [
-        {
-          level: 1,
-          title: 'User Stories',
-          tags: [],
-          content: 'No feedback yet'
-        }
-      ]
-    };
-
-    it('should process file with RESPONSE tags', async () => {
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(mockOrgDataWithResponses);
-      mockContext.fileHandler.writeDocument = jest.fn().mockResolvedValue({
+    it('should successfully refine analysis', async () => {
+      mockAgentRunner.refine.mockResolvedValue(mockRefinementResult);
+      (mockContext.fileHandler.writeDocument as jest.Mock).mockReturnValue({
         success: true,
         filePath: 'test-v2.org',
-        format: 'orgmode'
+        format: 'orgmode',
+        statistics: {}
       });
       
       command.register(program);
       
       await program.parseAsync(['node', 'test', 'refine', 'test.org']);
       
-      expect(mockContext.progressManager.start).toHaveBeenCalledWith('📄 Reading org-mode file with responses...');
-      expect(mockContext.progressManager.update).toHaveBeenCalledWith('🔍 Found 2 :RESPONSE: sections');
-      expect(mockContext.progressManager.update).toHaveBeenCalledWith('🔄 Processing feedback...');
-      expect(mockContext.progressManager.update).toHaveBeenCalledWith('💾 Saving refined version...');
-      expect(mockContext.progressManager.info).toHaveBeenCalledWith('Next iteration: Add :RESPONSE: tags to test-v2.org for further refinement');
-      expect(mockContext.progressManager.succeed).toHaveBeenCalledWith('✅ Refinement complete! Saved to: test-v2.org');
-    });
-
-    it('should handle file without RESPONSE tags', async () => {
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(mockOrgDataNoResponses);
-      
-      command.register(program);
-      
-      await program.parseAsync(['node', 'test', 'refine', 'test.org']);
-      
-      expect(mockContext.progressManager.update).toHaveBeenCalledWith('🔍 Found 0 :RESPONSE: sections');
-      expect(mockContext.progressManager.warn).toHaveBeenCalledWith('⚠️  No :RESPONSE: tags found. Add feedback using :RESPONSE: tags and try again.');
-      expect(mockContext.fileHandler.writeDocument).not.toHaveBeenCalled();
-    });
-
-    it('should auto-version output file', async () => {
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(mockOrgDataWithResponses);
-      mockContext.fileHandler.writeDocument = jest.fn().mockResolvedValue({
-        success: true,
-        filePath: 'test-v2.org',
-        format: 'orgmode'
+      expect(mockContext.progressManager.start).toHaveBeenCalledWith('🔄 Starting refinement with user feedback...');
+      expect(mockAgentRunner.refine).toHaveBeenCalledWith('test.org', {
+        modelName: 'o3-mini'
       });
-      
-      command.register(program);
-      
-      await program.parseAsync(['node', 'test', 'refine', 'test.org']);
-      
       expect(mockContext.fileHandler.writeDocument).toHaveBeenCalledWith(
-        mockOrgDataWithResponses,
+        expect.objectContaining({
+          requirements: mockRefinementResult.requirements,
+          userStories: mockRefinementResult.userStories,
+          refinementIteration: 2
+        }), 
         'test-v2.org',
         'orgmode'
       );
+      expect(mockContext.progressManager.succeed).toHaveBeenCalledWith('✅ Refinement complete! Results saved to: test-v2.org');
     });
 
-    it('should increment version for already versioned files', async () => {
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(mockOrgDataWithResponses);
-      mockContext.fileHandler.writeDocument = jest.fn().mockResolvedValue({
-        success: true,
-        filePath: 'test-v3.org',
-        format: 'orgmode'
-      });
+    it('should handle no previous analysis error', async () => {
+      const error = new Error('No previous analysis found');
+      mockAgentRunner.refine.mockRejectedValue(error);
       
       command.register(program);
       
-      await program.parseAsync(['node', 'test', 'refine', 'test-v2.org']);
+      await expect(program.parseAsync(['node', 'test', 'refine', 'test.org']))
+        .rejects.toThrow('Process exited with code 1');
       
-      expect(mockContext.fileHandler.writeDocument).toHaveBeenCalledWith(
-        mockOrgDataWithResponses,
-        'test-v3.org',
-        'orgmode'
-      );
+      expect(mockContext.progressManager.fail).toHaveBeenCalledWith('❌ No previous analysis found');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('\n💡 Tip: Run "ideaforge analyze" on this file first\n');
+      expect(mockContext.errorHandler.handle).toHaveBeenCalledWith(error);
+    });
+
+    it('should handle interruption', async () => {
+      const error = new Error('Refinement interrupted');
+      mockAgentRunner.refine.mockRejectedValue(error);
+      
+      command.register(program);
+      
+      await expect(program.parseAsync(['node', 'test', 'refine', 'test.org']))
+        .rejects.toThrow('Process exited with code 1');
+      
+      expect(mockContext.progressManager.warn).toHaveBeenCalledWith('⚠️  Refinement was interrupted');
+      expect(mockContext.errorHandler.handle).toHaveBeenCalledWith(error);
+    });
+
+    it('should handle generic errors', async () => {
+      const error = new Error('Something went wrong');
+      mockAgentRunner.refine.mockRejectedValue(error);
+      
+      command.register(program);
+      
+      await expect(program.parseAsync(['node', 'test', 'refine', 'test.org']))
+        .rejects.toThrow('Process exited with code 1');
+      
+      expect(mockContext.progressManager.fail).toHaveBeenCalledWith('❌ Refinement failed');
+      expect(mockContext.errorHandler.handle).toHaveBeenCalledWith(error);
+      expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should use custom output path when specified', async () => {
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(mockOrgDataWithResponses);
-      mockContext.fileHandler.writeDocument = jest.fn().mockResolvedValue({
+      mockAgentRunner.refine.mockResolvedValue(mockRefinementResult);
+      (mockContext.fileHandler.writeDocument as jest.Mock).mockReturnValue({
         success: true,
         filePath: 'custom-output.org',
-        format: 'orgmode'
+        format: 'orgmode',
+        statistics: {}
       });
       
       command.register(program);
@@ -168,74 +207,91 @@ describe('RefineCommand', () => {
       await program.parseAsync(['node', 'test', 'refine', 'test.org', '--output', 'custom-output.org']);
       
       expect(mockContext.fileHandler.writeDocument).toHaveBeenCalledWith(
-        mockOrgDataWithResponses,
+        expect.any(Object),
         'custom-output.org',
         'orgmode'
       );
     });
 
-    it('should handle file read errors', async () => {
-      const error = new Error('File not found');
-      mockContext.fileHandler.readOrgFile = jest.fn().mockRejectedValue(error);
-      const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('Process exited');
+    it('should handle progress events', async () => {
+      mockAgentRunner.refine.mockImplementation(async () => {
+        // Emit progress events
+        mockAgentRunner.emit('progress', {
+          node: 'responseProcessing',
+          message: 'Processing responses...',
+          timestamp: new Date(),
+          level: 'info'
+        });
+        mockAgentRunner.emit('progress', {
+          node: 'feedbackIntegration',
+          message: 'Integrating feedback...',
+          timestamp: new Date(),
+          level: 'warning'
+        });
+        return mockRefinementResult;
       });
       
-      command.register(program);
-      
-      await expect(
-        program.parseAsync(['node', 'test', 'refine', 'missing.org'])
-      ).rejects.toThrow('Process exited');
-      
-      expect(mockContext.progressManager.fail).toHaveBeenCalledWith('❌ Refinement failed');
-      expect(mockContext.errorHandler.handle).toHaveBeenCalledWith(error);
-      expect(exitSpy).toHaveBeenCalledWith(1);
-      
-      exitSpy.mockRestore();
-    });
-
-    it('should count nested RESPONSE tags correctly', async () => {
-      const nestedData = {
-        sections: [
-          {
-            level: 1,
-            title: 'Parent',
-            tags: ['RESPONSE'],
-            subsections: [
-              {
-                level: 2,
-                title: 'Child 1',
-                tags: ['RESPONSE'],
-                subsections: [
-                  {
-                    level: 3,
-                    title: 'Grandchild',
-                    tags: ['RESPONSE']
-                  }
-                ]
-              },
-              {
-                level: 2,
-                title: 'Child 2',
-                tags: []
-              }
-            ]
-          }
-        ]
-      };
-      
-      mockContext.fileHandler.readOrgFile = jest.fn().mockResolvedValue(nestedData);
-      mockContext.fileHandler.writeDocument = jest.fn().mockResolvedValue({
+      (mockContext.fileHandler.writeDocument as jest.Mock).mockReturnValue({
         success: true,
         filePath: 'test-v2.org',
-        format: 'orgmode'
+        format: 'orgmode',
+        statistics: {}
       });
       
       command.register(program);
       
       await program.parseAsync(['node', 'test', 'refine', 'test.org']);
       
-      expect(mockContext.progressManager.update).toHaveBeenCalledWith('🔍 Found 3 :RESPONSE: sections');
+      expect(mockContext.progressManager.update).toHaveBeenCalledWith('Processing responses...');
+      expect(mockContext.progressManager.warn).toHaveBeenCalledWith('Integrating feedback...');
+    });
+
+    it('should handle different model options', async () => {
+      mockAgentRunner.refine.mockResolvedValue(mockRefinementResult);
+      (mockContext.fileHandler.writeDocument as jest.Mock).mockReturnValue({
+        success: true,
+        filePath: 'test-v2.org',
+        format: 'orgmode',
+        statistics: {}
+      });
+      
+      command.register(program);
+      
+      await program.parseAsync(['node', 'test', 'refine', 'test.org', '--model', 'gpt-4.1']);
+      
+      expect(mockAgentRunner.refine).toHaveBeenCalledWith('test.org', {
+        modelName: 'gpt-4.1'
+      });
+    });
+
+    it('should show refinement summary with changes', async () => {
+      const resultWithChanges: RefinementResult = {
+        ...mockRefinementResult,
+        changesApplied: [
+          'Updated requirement priorities based on user feedback',
+          'Added new user story for admin functionality',
+          'Refined technical requirements'
+        ]
+      };
+      
+      mockAgentRunner.refine.mockResolvedValue(resultWithChanges);
+      (mockContext.fileHandler.writeDocument as jest.Mock).mockReturnValue({
+        success: true,
+        filePath: 'test-v2.org',
+        format: 'orgmode',
+        statistics: {}
+      });
+      
+      command.register(program);
+      
+      await program.parseAsync(['node', 'test', 'refine', 'test.org']);
+      
+      // Check that summary was displayed
+      expect(consoleLogSpy).toHaveBeenCalledWith('\n🔄 Refinement Summary:');
+      expect(consoleLogSpy).toHaveBeenCalledWith('   • Iteration: #2');
+      expect(consoleLogSpy).toHaveBeenCalledWith('   • Changes Applied: 3');
+      expect(consoleLogSpy).toHaveBeenCalledWith('\n📝 Changes:');
+      expect(consoleLogSpy).toHaveBeenCalledWith('   • Updated requirement priorities based on user feedback');
     });
   });
 }); 

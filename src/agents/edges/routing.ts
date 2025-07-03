@@ -95,4 +95,30 @@ export function determineAnalysisMode(state: ProjectState): AnalysisMode {
   
   // Could add logic for quick analysis based on flags or document size
   return 'full';
+}
+
+/**
+ * Determines if we should search Hacker News
+ */
+export function shouldSearchHackerNews(state: ProjectState): boolean {
+  // Search HN if we have extracted technologies
+  return !!(state.extractedTechnologies && state.extractedTechnologies.length > 0);
+}
+
+/**
+ * Determines if we should search Reddit
+ */
+export function shouldSearchReddit(state: ProjectState): boolean {
+  // Search Reddit if we have extracted technologies and already searched HN
+  return !!(state.extractedTechnologies && 
+           state.extractedTechnologies.length > 0 &&
+           state.hackerNewsResults);
+}
+
+/**
+ * Determines if we should perform additional research
+ */
+export function shouldPerformAdditionalResearch(state: ProjectState): boolean {
+  // Perform additional research if we have research topics
+  return !!(state.researchTopics && state.researchTopics.length > 0);
 } 

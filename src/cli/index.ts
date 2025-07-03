@@ -95,6 +95,48 @@ program
     console.log(chalk.blue('Coming soon:'), 'Initialize template functionality');
   });
 
+// Add troubleshoot command
+program
+  .command('troubleshoot')
+  .description('Show troubleshooting guide for common issues')
+  .action(() => {
+    console.log(`
+🔧 IdeaForge Troubleshooting Guide
+
+Common Issues and Solutions:
+
+1. "OpenAI API key not configured"
+   • Copy .env.example to .env
+   • Add your OpenAI API key
+   • Get a key at: https://platform.openai.com/api-keys
+
+2. "Rate limit exceeded"
+   • Wait 1-2 minutes before retrying
+   • Use a different model: --model gpt-3.5-turbo
+   • Check usage: https://platform.openai.com/usage
+
+3. "No previous analysis found"
+   • Run 'ideaforge analyze' first
+   • Check the file path is correct
+   • Use 'ideaforge session <file>' to check status
+
+4. "Analysis interrupted"
+   • Your partial results may be saved
+   • Run the command again to continue
+   • Use --fresh to start over
+
+5. "File not found"
+   • Check the file path and spelling
+   • Use absolute paths if needed
+   • Ensure .org extension
+
+For more help:
+• Run with DEBUG=1 for detailed logs
+• Check docs: https://github.com/your/ideaforge
+• Report issues: https://github.com/your/ideaforge/issues
+    `);
+  });
+
 // Custom help with examples
 program.on('--help', () => {
   console.log('');
@@ -138,3 +180,6 @@ if (process.argv.length === 2) {
 
 // Parse arguments
 program.parse();
+// Test comment
+// Test comment
+// Test comment
