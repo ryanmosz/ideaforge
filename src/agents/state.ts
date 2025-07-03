@@ -112,4 +112,7 @@ export interface ProjectState {
   
   // Message history for debugging
   messages: BaseMessage[];
+  
+  // Formatted output
+  formattedChangelog?: string;
 } 
