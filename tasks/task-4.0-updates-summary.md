@@ -85,11 +85,11 @@ When implementing Task 4.0, I'll:
 3. Run tests continuously during development
 4. Provide real-time feedback on implementation progress
 
-# Task 4.4.2: HackerNewsSearchNode - ✅ Complete (Enhanced)
+# Task 4.4.2: HackerNewsSearchNode - ✅ Complete (Enhanced v2)
 
 ### Implementation Details
 
-Created `HackerNewsSearchNode` that searches Hacker News via the Algolia API using multiple strategies to capture relevance, influence, importance, and recency.
+Created `HackerNewsSearchNode` that searches Hacker News via the Algolia API using multiple strategies to capture relevance, influence, importance, and recency. Now includes detailed selection context explaining WHY each result was chosen.
 
 **Multi-Strategy Search Approach:**
 1. **Front Page Recent** (must-read): Posts with 100+ points from last 48 hours (2x relevance boost)
@@ -112,40 +112,43 @@ Created `HackerNewsSearchNode` that searches Hacker News via the Algolia API usi
 - **Smart Deduplication**: Keeps highest relevance score when same post appears in multiple strategies
 - **Result Categorization**: Summary shows breakdown by category (must-read, trending, influential, relevant)
 
-**API Integration:**
-- Uses multiple Algolia endpoints:
-  - `/search` - Standard relevance search
-  - `/search_by_date` - Time-filtered searches
-  - Numeric filters for points and time ranges
-- Parallel searches for all strategies
-- Graceful error handling per strategy
+**NEW: Selection Context & Relationship Analysis**:
+- **Selection Reason**: Explains WHY each result was included
+  - "Front page discussion directly related to your topic"
+  - "Rapidly gaining traction (32 points/hour)"
+  - "Highly influential discussion (2500 points, 800 comments)"
+- **Relationship Mapping**: Describes HOW each result relates to the search topic
+  - Direct matches: "Matches keywords: react, hooks"
+  - Same domain: "Related frontend technology"
+  - Cross-domain: "Cross-domain insight: backend perspective on frontend"
+  - General wisdom: "General engineering wisdom applicable to your domain"
+  - Performance: "Performance insights that may apply to your use case"
+  - Business context: "Product/business context for technical decisions"
+
+**Technology Category Detection**:
+- Automatically categorizes posts into domains (frontend, backend, devops, data, mobile, security, architecture)
+- Identifies cross-domain insights that might be valuable
+- Recognizes general engineering patterns applicable across domains
 
 **Enhanced Summary Format:**
 ```
 🔥 Front Page: Posted 12 hours ago | 250 points (21/hr) | 89 comments
+📎 Front page discussion directly related to your topic
+🔗 Matches keywords: performance, optimization
 [Content excerpt from story...]
 
 📈 Trending: Posted today | 150 points (50/hr) | 45 comments
+📎 Highly influential recent discussion with potential relevance
+🔗 Cross-domain insight: backend perspective on frontend
 [Highlighted search results...]
 ```
 
 **Files Updated:**
-- `src/agents/nodes/research/HackerNewsSearchNode.ts` - Complete rewrite with multi-strategy approach
-- `tests/agents/nodes/research/HackerNewsSearchNode.test.ts` - Updated tests for new features
+- `src/agents/nodes/research/HackerNewsSearchNode.ts` - Added selection context analysis
+- `tests/agents/nodes/research/HackerNewsSearchNode.test.ts` - Added tests for context features
 
 **Test Coverage:**
-- Still maintaining high coverage (94%+ statements)
-- All 11 tests passing
-- New tests for velocity, categorization, and influence scoring
+- All 14 tests passing (added 3 new tests)
+- Tests for tangential relationships, direct matches, and general wisdom
 
-**Result Structure (unchanged externally):**
-```typescript
-hackerNewsResults: {
-  title: string;
-  url: string;
-  summary: string;     // Now includes emoji indicators and velocity
-  relevance: number;   // Now composite score with category boosts
-}[]
-```
-
-This enhanced implementation ensures IdeaForge captures not just relevant discussions, but also influential and trending content that might have tangential but important connections to the project. 
+This enhanced implementation ensures users understand not just WHAT content was found, but WHY it was selected and HOW it relates to their search, making it easier to identify valuable insights even from tangentially related discussions. 

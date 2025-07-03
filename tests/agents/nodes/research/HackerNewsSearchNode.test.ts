@@ -337,6 +337,10 @@ describe('HackerNewsSearchNode', () => {
       const summary = result.hackerNewsResults![0].summary;
       // Should include metadata and content (with or without emoji prefix)
       expect(summary).toMatch(/Posted .* \| \d+ points.* \| \d+ comments/);
+      // Should include selection reason with 📎
+      expect(summary).toContain('📎');
+      // Should include relationship with 🔗
+      expect(summary).toContain('🔗');
       expect(summary).toContain('testing frameworks');
     });
 
@@ -360,6 +364,88 @@ describe('HackerNewsSearchNode', () => {
       
       // Should be limited to maxTotalResults (25)
       expect(result.hackerNewsResults!.length).toBeLessThanOrEqual(25);
+    });
+
+    it('should explain selection reasons for tangentially related content', async () => {
+      mockState.researchTopics = ['Node.js performance'];
+      
+      // Mock a front page post that's tangentially related
+      mockedAxios.get.mockImplementation((_, config) => {
+        const params = config?.params;
+        
+        // Front page search returns a general performance post
+        if (params?.numericFilters?.includes('points>100')) {
+          return Promise.resolve({
+            data: {
+              hits: [{
+                objectID: 'tangential1',
+                title: 'How We Optimized Our Python Backend to Handle 1M Requests',
+                points: 850,
+                num_comments: 245,
+                created_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString() // 20 hours ago
+              }]
+            }
+          });
+        }
+        
+        return Promise.resolve({ data: { hits: [] } });
+      });
+
+      const result = await node.process(mockState);
+      
+      expect(result.hackerNewsResults).toHaveLength(1);
+      const summary = result.hackerNewsResults![0].summary;
+      
+      // Should identify this as a front page post
+      expect(summary).toContain('🔥 Front Page');
+      // Should explain why it was selected
+      expect(summary).toContain('Highly influential recent discussion');
+      // Should explain the relationship - both are backend technologies
+      expect(summary).toContain('Related backend technology');
+    });
+
+    it('should identify direct keyword matches in selection reason', async () => {
+      mockState.researchTopics = ['React hooks'];
+      
+      mockedAxios.get.mockResolvedValue({
+        data: {
+          hits: [{
+            objectID: 'direct1',
+            title: 'Understanding React Hooks: A Deep Dive',
+            points: 450,
+            num_comments: 120,
+            created_at: new Date(Date.now() - 30 * 3600 * 1000).toISOString()
+          }]
+        }
+      });
+
+      const result = await node.process(mockState);
+      
+      const summary = result.hackerNewsResults![0].summary;
+      // Should note the direct relationship
+      expect(summary).toMatch(/Matches keywords.*react.*hooks/i);
+    });
+
+    it('should categorize general engineering wisdom correctly', async () => {
+      mockState.researchTopics = ['microservices architecture'];
+      
+      mockedAxios.get.mockResolvedValue({
+        data: {
+          hits: [{
+            objectID: 'wisdom1',
+            title: 'Lessons Learned from 10 Years of Building Software',
+            points: 1200,
+            num_comments: 350,
+            created_at: new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString()
+          }]
+        }
+      });
+
+      const result = await node.process(mockState);
+      
+      const summary = result.hackerNewsResults![0].summary;
+      // Should identify as general engineering wisdom
+      expect(summary).toContain('General engineering wisdom');
     });
   });
 }); 

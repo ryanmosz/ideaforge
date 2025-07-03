@@ -35,6 +35,8 @@ interface ProcessedResult {
   isFrontPage?: boolean;
   isTrending?: boolean;
   category?: 'must-read' | 'trending' | 'influential' | 'relevant';
+  selectionReason?: string;
+  relationshipToTopic?: string;
 }
 
 export class HackerNewsSearchNode {
@@ -105,7 +107,15 @@ export class HackerNewsSearchNode {
 
       return {
         messages,
-        hackerNewsResults: sortedResults.map(({ category, velocity, isFrontPage, isTrending, ...result }) => result),
+        hackerNewsResults: sortedResults.map(({ 
+          category, 
+          velocity, 
+          isFrontPage, 
+          isTrending, 
+          selectionReason,
+          relationshipToTopic,
+          ...result 
+        }) => result),
         currentNode: 'HackerNewsSearchNode',
         nextNode: 'RedditSearchNode'
       };
@@ -232,8 +242,25 @@ export class HackerNewsSearchNode {
       // Apply category-specific relevance boost
       const relevance = Math.min(Math.round(baseRelevance * relevanceBoost), 100);
       
+      // Determine selection reason and relationship
+      const { selectionReason, relationshipToTopic } = this.analyzeSelectionContext(
+        result, 
+        searchTopic, 
+        category, 
+        baseRelevance,
+        velocity,
+        isFrontPage
+      );
+      
       // Extract enhanced summary
-      const summary = this.extractEnhancedSummary(result, velocity, isFrontPage, isTrending);
+      const summary = this.extractEnhancedSummary(
+        result, 
+        velocity, 
+        isFrontPage, 
+        isTrending,
+        selectionReason,
+        relationshipToTopic
+      );
       
       return {
         title: result.title || 'Untitled',
@@ -243,9 +270,151 @@ export class HackerNewsSearchNode {
         velocity,
         isFrontPage,
         isTrending,
-        category
+        category,
+        selectionReason,
+        relationshipToTopic
       };
     });
+  }
+
+  private analyzeSelectionContext(
+    result: HNSearchResult,
+    searchTopic: string,
+    category: ProcessedResult['category'],
+    _baseRelevance: number,
+    velocity: number,
+    _isFrontPage: boolean
+  ): { selectionReason: string; relationshipToTopic: string } {
+    const titleLower = (result.title || '').toLowerCase();
+    const topicLower = searchTopic.toLowerCase();
+    const topicWords = topicLower.split(' ').filter(w => w.length > 2);
+    
+    // Check for direct keyword matches
+    const matchedKeywords = topicWords.filter(word => titleLower.includes(word));
+    const hasDirectMatch = matchedKeywords.length > 0;
+    
+    // Analyze the relationship
+    let relationshipToTopic = '';
+    let selectionReason = '';
+    
+    if (category === 'must-read') {
+      if (hasDirectMatch) {
+        selectionReason = 'Front page discussion directly related to your topic';
+        relationshipToTopic = `Matches keywords: ${matchedKeywords.join(', ')}`;
+      } else {
+        selectionReason = 'Highly influential recent discussion with potential relevance';
+        relationshipToTopic = this.inferTangentialRelationship(result.title || '', searchTopic);
+      }
+    } else if (category === 'trending') {
+      selectionReason = `Rapidly gaining traction (${Math.round(velocity)} points/hour)`;
+      if (hasDirectMatch) {
+        relationshipToTopic = 'Directly addresses your search topic';
+      } else {
+        relationshipToTopic = this.inferTangentialRelationship(result.title || '', searchTopic);
+      }
+    } else if (category === 'influential') {
+      selectionReason = `Highly influential discussion (${result.points} points, ${result.num_comments} comments)`;
+      relationshipToTopic = hasDirectMatch 
+        ? 'Classic discussion on your exact topic'
+        : this.inferTangentialRelationship(result.title || '', searchTopic);
+    } else {
+      selectionReason = 'Relevant based on keyword matching and engagement';
+      relationshipToTopic = hasDirectMatch
+        ? `Contains keywords: ${matchedKeywords.join(', ')}`
+        : 'Related to broader topic area';
+    }
+    
+    return { selectionReason, relationshipToTopic };
+  }
+
+  private inferTangentialRelationship(title: string, searchTopic: string): string {
+    const titleLower = title.toLowerCase();
+    const topicLower = searchTopic.toLowerCase();
+    
+    // Common technology relationships
+    const techCategories = {
+      frontend: ['react', 'vue', 'angular', 'svelte', 'javascript', 'typescript', 'css', 'html', 'webpack', 'vite'],
+      backend: ['node', 'python', 'java', 'go', 'rust', 'ruby', 'php', 'api', 'server', 'database'],
+      devops: ['docker', 'kubernetes', 'ci', 'cd', 'deploy', 'aws', 'azure', 'gcp', 'terraform'],
+      data: ['data', 'ml', 'ai', 'analytics', 'etl', 'warehouse', 'pipeline', 'spark', 'hadoop'],
+      mobile: ['ios', 'android', 'react native', 'flutter', 'swift', 'kotlin', 'mobile'],
+      security: ['security', 'auth', 'encryption', 'vulnerability', 'hack', 'breach', 'crypto'],
+      architecture: ['architecture', 'design', 'pattern', 'microservice', 'monolith', 'scale', 'distributed']
+    };
+    
+    // Find which categories the title and topic belong to
+    let titleCategories: string[] = [];
+    let topicCategories: string[] = [];
+    
+    for (const [category, keywords] of Object.entries(techCategories)) {
+      if (keywords.some(kw => titleLower.includes(kw))) {
+        titleCategories.push(category);
+      }
+      if (keywords.some(kw => topicLower.includes(kw))) {
+        topicCategories.push(category);
+      }
+    }
+    
+    // Determine relationship
+    const sharedCategories = titleCategories.filter(c => topicCategories.includes(c));
+    
+    if (sharedCategories.length > 0) {
+      return `Related ${sharedCategories[0]} technology`;
+    } else if (titleCategories.length > 0 && topicCategories.length > 0) {
+      return `Cross-domain insight: ${titleCategories[0]} perspective on ${topicCategories[0]}`;
+    } else if (titleLower.includes('best practice') || titleLower.includes('lesson') || titleLower.includes('mistake')) {
+      return 'General engineering wisdom applicable to your domain';
+    } else if (titleLower.includes('performance') || titleLower.includes('optimization')) {
+      return 'Performance insights that may apply to your use case';
+    } else if (titleLower.includes('startup') || titleLower.includes('product') || titleLower.includes('launch')) {
+      return 'Product/business context for technical decisions';
+    } else {
+      return 'Potentially relevant to broader technical landscape';
+    }
+  }
+
+  private extractEnhancedSummary(
+    result: HNSearchResult, 
+    velocity: number, 
+    isFrontPage: boolean, 
+    isTrending: boolean,
+    selectionReason: string,
+    relationshipToTopic: string
+  ): string {
+    let prefix = '';
+    
+    // Add status indicators
+    if (isFrontPage) {
+      prefix = '🔥 Front Page: ';
+    } else if (isTrending) {
+      prefix = '📈 Trending: ';
+    } else if ((result.points || 0) > 500) {
+      prefix = '⭐ Influential: ';
+    }
+    
+    // Build metadata line
+    const points = result.points || 0;
+    const comments = result.num_comments || 0;
+    const age = result.created_at ? this.getRelativeTime(new Date(result.created_at)) : 'unknown time';
+    
+    let metadata = `Posted ${age} | ${points} points`;
+    if (velocity > 5) {
+      metadata += ` (${Math.round(velocity)}/hr)`;
+    }
+    metadata += ` | ${comments} comments`;
+    
+    // Add selection context
+    const contextLine = `\n📎 ${selectionReason}\n🔗 ${relationshipToTopic}`;
+    
+    // Try to get content summary
+    let contentSummary = '';
+    if (result._highlightResult?.story_text?.value) {
+      contentSummary = '\n' + this.cleanHighlightedText(result._highlightResult.story_text.value);
+    } else if (result.story_text) {
+      contentSummary = '\n' + this.truncateText(result.story_text, 150);
+    }
+    
+    return prefix + metadata + contextLine + contentSummary;
   }
 
   private calculateRelevance(result: HNSearchResult, searchTopic: string): number {
@@ -298,45 +467,6 @@ export class HackerNewsSearchNode {
     
     // Normalize to 0-100 scale
     return Math.round(Math.min(score, 100));
-  }
-
-  private extractEnhancedSummary(
-    result: HNSearchResult, 
-    velocity: number, 
-    isFrontPage: boolean, 
-    isTrending: boolean
-  ): string {
-    let prefix = '';
-    
-    // Add status indicators
-    if (isFrontPage) {
-      prefix = '🔥 Front Page: ';
-    } else if (isTrending) {
-      prefix = '📈 Trending: ';
-    } else if ((result.points || 0) > 500) {
-      prefix = '⭐ Influential: ';
-    }
-    
-    // Build metadata line
-    const points = result.points || 0;
-    const comments = result.num_comments || 0;
-    const age = result.created_at ? this.getRelativeTime(new Date(result.created_at)) : 'unknown time';
-    
-    let metadata = `Posted ${age} | ${points} points`;
-    if (velocity > 5) {
-      metadata += ` (${Math.round(velocity)}/hr)`;
-    }
-    metadata += ` | ${comments} comments`;
-    
-    // Try to get content summary
-    let contentSummary = '';
-    if (result._highlightResult?.story_text?.value) {
-      contentSummary = '\n' + this.cleanHighlightedText(result._highlightResult.story_text.value);
-    } else if (result.story_text) {
-      contentSummary = '\n' + this.truncateText(result.story_text, 150);
-    }
-    
-    return prefix + metadata + contentSummary;
   }
 
   private deduplicateResults(results: ProcessedResult[]): ProcessedResult[] {
