@@ -9,6 +9,7 @@ import {
   HealthCheckResponse
 } from '../types/n8n-types';
 import { getN8nConfig } from '../config/n8n-config';
+import { RetryHandler, RetryConfig } from '../utils/retry-handler';
 
 /**
  * Client for communicating with n8n webhooks
@@ -16,8 +17,9 @@ import { getN8nConfig } from '../config/n8n-config';
 export class N8nClient {
   private client: AxiosInstance;
   private config: N8nConfig;
+  private retryHandler: RetryHandler;
   
-  constructor(config?: Partial<N8nConfig>) {
+  constructor(config?: Partial<N8nConfig>, retryConfig?: Partial<RetryConfig>) {
     // Merge provided config with environment config
     this.config = {
       ...getN8nConfig(),
@@ -32,6 +34,12 @@ export class N8nClient {
         'Content-Type': 'application/json',
         'X-API-Key': this.config.apiKey
       }
+    });
+    
+    // Create retry handler with custom config if provided
+    this.retryHandler = new RetryHandler({
+      maxRetries: this.config.retries,
+      ...retryConfig
     });
     
     this.setupInterceptors();
@@ -90,6 +98,13 @@ export class N8nClient {
    */
   getConfig(): Readonly<N8nConfig> {
     return { ...this.config };
+  }
+  
+  /**
+   * Get the retry handler for configuration inspection
+   */
+  getRetryHandler(): RetryHandler {
+    return this.retryHandler;
   }
   
   /**
@@ -195,8 +210,13 @@ export class N8nClient {
    */
   protected async post<T>(endpoint: string, data: any): Promise<N8nResponse<T>> {
     try {
-      const response = await this.client.post<N8nResponse<T>>(endpoint, data);
-      return response.data;
+      return await this.retryHandler.execute(
+        async () => {
+          const response = await this.client.post<N8nResponse<T>>(endpoint, data);
+          return response.data;
+        },
+        `POST ${endpoint}`
+      );
     } catch (error) {
       return this.handleError(error);
     }
@@ -207,8 +227,13 @@ export class N8nClient {
    */
   protected async get<T>(endpoint: string): Promise<N8nResponse<T>> {
     try {
-      const response = await this.client.get<N8nResponse<T>>(endpoint);
-      return response.data;
+      return await this.retryHandler.execute(
+        async () => {
+          const response = await this.client.get<N8nResponse<T>>(endpoint);
+          return response.data;
+        },
+        `GET ${endpoint}`
+      );
     } catch (error) {
       return this.handleError(error);
     }

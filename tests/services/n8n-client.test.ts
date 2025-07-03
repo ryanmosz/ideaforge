@@ -1,10 +1,19 @@
 import axios from 'axios';
 import { N8nClient } from '../../src/services/n8n-client';
 import { N8nConfig } from '../../src/types/n8n-types';
+import { RetryHandler } from '../../src/utils/retry-handler';
 
 // Mock axios
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+// Mock RetryHandler
+jest.mock('../../src/utils/retry-handler', () => ({
+  RetryHandler: jest.fn().mockImplementation(() => ({
+    execute: jest.fn((operation) => operation()),
+    getConfig: jest.fn()
+  }))
+}));
 
 // Mock console methods
 const originalConsoleLog = console.log;
@@ -249,10 +258,83 @@ describe('N8nClient', () => {
             cached: false,
             requestDuration: 0
           }
-        });
-      });
+              });
     });
   });
+  
+  describe('retry functionality', () => {
+    let client: N8nClient;
+    let mockRetryHandler: any;
+    
+    beforeEach(() => {
+      // Get the mock retry handler instance
+      mockRetryHandler = {
+        execute: jest.fn((operation) => operation()),
+        getConfig: jest.fn().mockReturnValue({
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 30000,
+          backoffMultiplier: 2,
+          retryableErrors: ['ECONNREFUSED', 'ETIMEDOUT', '429', '500', '502', '503', '504']
+        })
+      };
+      
+      (RetryHandler as jest.Mock).mockImplementation(() => mockRetryHandler);
+      
+      client = new N8nClient();
+    });
+    
+    it('should use retry handler for POST requests', async () => {
+      const mockResponse = { data: { status: 'success' as const, data: {} } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      
+      await client.searchHackerNews('test', 'session-123');
+      
+      expect(mockRetryHandler.execute).toHaveBeenCalledWith(
+        expect.any(Function),
+        'POST /ideaforge/hackernews-search'
+      );
+    });
+    
+    it('should use retry handler for GET requests', async () => {
+      const mockResponse = { data: { status: 'success' as const, data: {} } };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      
+      await client.checkHealth();
+      
+      expect(mockRetryHandler.execute).toHaveBeenCalledWith(
+        expect.any(Function),
+        'GET /ideaforge/health'
+      );
+    });
+    
+    it('should configure retry handler with n8n config retries', () => {
+      process.env.N8N_RETRIES = '5';
+      
+      new N8nClient();
+      
+      expect(RetryHandler).toHaveBeenCalledWith({
+        maxRetries: 5
+      });
+    });
+    
+    it('should allow custom retry configuration', () => {
+      new N8nClient({}, { initialDelay: 2000, backoffMultiplier: 3 });
+      
+      expect(RetryHandler).toHaveBeenCalledWith({
+        maxRetries: 3,
+        initialDelay: 2000,
+        backoffMultiplier: 3
+      });
+    });
+    
+    it('should expose retry handler', () => {
+      const retryHandler = client.getRetryHandler();
+      
+      expect(retryHandler).toBe(mockRetryHandler);
+    });
+  });
+});
   
   describe('webhook methods', () => {
     let client: N8nClient;

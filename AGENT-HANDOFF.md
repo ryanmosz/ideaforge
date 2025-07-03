@@ -152,12 +152,21 @@ All n8n webhook endpoints created and documented:
   - Added 8 new tests (24 in n8n-client.test.ts)
   - Verified end-to-end connectivity with all webhooks
 
+- [x] 5.2.3: Add timeout and retry logic
+  - Created `src/utils/retry-handler.ts` with exponential backoff
+  - Implemented configurable retry behavior with jitter
+  - Integrated RetryHandler into N8nClient for all requests
+  - Retryable errors: ECONNREFUSED, ETIMEDOUT, 429, 5xx errors
+  - Added 14 tests for RetryHandler (all passing)
+  - Added 5 tests for retry integration in N8nClient
+  - Total: 43 passing tests (29 in n8n-client, 14 in retry-handler)
+
 ### Next Immediate Steps:
-**Continue Task 5.2 with subtask 5.2.3: Add timeout and retry logic**
-1. Create retry handler utility class
-2. Implement exponential backoff strategy
-3. Add retry configuration options
-4. Test retry behavior with simulated failures
+**Continue Task 5.2 with subtask 5.2.4: Create response transformation layer**
+1. Create response transformer service
+2. Transform n8n webhook responses to LangGraph format
+3. Handle different result types (HN, Reddit)
+4. Add relevance scoring and metadata extraction
 
 ### n8n Integration Clarification:
 - Current code has a placeholder `N8N_WEBHOOK_URL` that isn't implemented yet
