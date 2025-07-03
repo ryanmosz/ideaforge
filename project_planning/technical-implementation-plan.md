@@ -79,9 +79,9 @@
 
 - [ ] 5.0 Develop n8n integration for external APIs
   - [x] 5.1 Create n8n webhook endpoints for CLI
-  - [ ] 5.2 Implement Hacker News API integration workflow
-  - [ ] 5.3 Build Reddit API integration workflow
-  - [ ] 5.4 Set up rate limiting and retry logic
+  - [x] 5.2 Implement Hacker News API integration workflow
+  - [x] 5.3 Build Reddit API integration workflow
+  - [x] 5.4 Set up rate limiting and retry logic
   - [ ] 5.5 Create response caching for API calls
   - [ ] 5.6 Build communication bridge to LangGraph
 

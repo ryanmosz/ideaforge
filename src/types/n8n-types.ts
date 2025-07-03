@@ -155,4 +155,38 @@ export interface RedditSearchResults {
   comments?: RedditComment[];
   query: string;
   subreddits: string[];
+}
+
+/**
+ * Unified search response type for both HackerNews and Reddit
+ */
+export interface SearchResponse {
+  success: boolean;
+  data?: {
+    items: Array<{
+      id: string;
+      title: string;
+      url?: string;
+      author?: string;
+      created_at?: string;
+      text?: string;
+      score?: number;
+      num_comments?: number;
+      source: 'hackernews' | 'reddit';
+      [key: string]: any;
+    }>;
+    metadata?: Record<string, any>;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+  metadata: {
+    source: string;
+    query: string;
+    timestamp: string;
+    cached: boolean;
+    cacheKey?: string;
+    [key: string]: any;
+  };
 } 

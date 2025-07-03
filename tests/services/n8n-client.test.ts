@@ -2,6 +2,8 @@ import axios from 'axios';
 import { N8nClient } from '../../src/services/n8n-client';
 import { N8nConfig } from '../../src/types/n8n-types';
 import { RetryHandler } from '../../src/utils/retry-handler';
+import { rateLimitManager } from '../../src/utils/rate-limiter';
+import { CacheKeyGenerator } from '../../src/utils/cache-key-generator';
 
 // Mock axios
 jest.mock('axios');
@@ -15,6 +17,79 @@ jest.mock('../../src/utils/retry-handler', () => ({
   }))
 }));
 
+// Mock rateLimitManager
+jest.mock('../../src/utils/rate-limiter', () => ({
+  rateLimitManager: {
+    checkAndWait: jest.fn(),
+    handleRateLimitError: jest.fn(),
+    getAllStats: jest.fn().mockReturnValue({
+      hackerNews: { 
+        currentRequests: 5, 
+        isBlocked: false,
+        oldestRequest: Date.now() - 300000,
+        newestRequest: Date.now() - 1000
+      },
+      reddit: { 
+        currentRequests: 2, 
+        isBlocked: false,
+        oldestRequest: Date.now() - 60000,
+        newestRequest: Date.now() - 5000
+      }
+    })
+  }
+}));
+
+// Mock cacheManager and SmartCacheManager
+jest.mock('../../src/services/cache-manager', () => {
+  class MockCacheManager {
+    constructor(_options: any = {}) {}
+    async get(_key: string): Promise<any> { return null; }
+    async set(_key: string, _data: any, _ttl?: number): Promise<void> {}
+    generateKey(prefix: string, params: any): string { return `${prefix}:${JSON.stringify(params)}`; }
+    getStats() { return { entries: 0, totalSize: 0, hitRate: 0 }; }
+    getAllEntries() { return []; }
+  }
+  
+  return {
+    CacheManager: MockCacheManager,
+    cacheManager: {
+      get: jest.fn().mockResolvedValue(null), // Default to cache miss
+      set: jest.fn().mockResolvedValue(undefined),
+      generateKey: jest.fn((prefix, params) => `${prefix}:${JSON.stringify(params)}`)
+    }
+  };
+});
+
+// Mock SmartCacheManager
+jest.mock('../../src/services/smart-cache-manager', () => {
+  const mockSmartCacheManager = jest.fn().mockImplementation(() => ({
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    setSearchResult: jest.fn().mockResolvedValue(undefined),
+    generateKey: jest.fn((prefix, params) => `${prefix}:${JSON.stringify(params)}`),
+    getStats: jest.fn().mockReturnValue({ entries: 0, totalSize: 0, hitRate: 0 }),
+    getAllEntries: jest.fn().mockReturnValue([]),
+    getPopularQueries: jest.fn().mockReturnValue([]),
+    getTrendingQueries: jest.fn().mockReturnValue([]),
+    getCacheEffectiveness: jest.fn().mockReturnValue({ averageHitRate: 0, popularityBenefit: 0 })
+  }));
+  
+  return {
+    SmartCacheManager: mockSmartCacheManager
+  };
+});
+
+// Mock CacheKeyGenerator
+jest.mock('../../src/utils/cache-key-generator', () => ({
+  CacheKeyGenerator: {
+    generateSearchKey: jest.fn((api, query, options = {}) => {
+      // Don't modify the options, just pass them through
+      const params = { q: query.toLowerCase().trim(), ...options };
+      return `${api}:search:${JSON.stringify(params)}`;
+    })
+  }
+}));
+
 // Mock console methods
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
@@ -22,6 +97,7 @@ const originalConsoleError = console.error;
 describe('N8nClient', () => {
   let client: N8nClient;
   let mockAxiosInstance: any;
+  let mockCacheManager: any;
   
   beforeEach(() => {
     // Reset environment variables
@@ -45,6 +121,21 @@ describe('N8nClient', () => {
     };
     
     mockedAxios.create.mockReturnValue(mockAxiosInstance);
+    
+    // Create mock cache manager
+    mockCacheManager = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      setSearchResult: jest.fn().mockResolvedValue(undefined),
+      getStats: jest.fn().mockReturnValue({ entries: 0, totalSize: 0, hitRate: 0 }),
+      getPopularQueries: jest.fn().mockReturnValue([]),
+      getTrendingQueries: jest.fn().mockReturnValue([]),
+      getCacheEffectiveness: jest.fn().mockReturnValue({ averageHitRate: 0, popularityBenefit: 0 })
+    };
+    
+    // Update SmartCacheManager mock to return our mock instance
+    const { SmartCacheManager } = jest.requireMock('../../src/services/smart-cache-manager');
+    SmartCacheManager.mockReturnValue(mockCacheManager);
   });
   
   afterEach(() => {
@@ -258,7 +349,8 @@ describe('N8nClient', () => {
             cached: false,
             requestDuration: 0
           }
-              });
+        });
+      });
     });
   });
   
@@ -285,14 +377,14 @@ describe('N8nClient', () => {
     });
     
     it('should use retry handler for POST requests', async () => {
-      const mockResponse = { data: { status: 'success' as const, data: {} } };
+      const mockResponse = { data: { status: 'success' as const, data: { items: [] } } };
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
       
       await client.searchHackerNews('test', 'session-123');
       
       expect(mockRetryHandler.execute).toHaveBeenCalledWith(
         expect.any(Function),
-        'POST /ideaforge/hackernews-search'
+        'HackerNews search: test'
       );
     });
     
@@ -334,13 +426,18 @@ describe('N8nClient', () => {
       expect(retryHandler).toBe(mockRetryHandler);
     });
   });
-});
   
   describe('webhook methods', () => {
     let client: N8nClient;
     
     beforeEach(() => {
       client = new N8nClient();
+      // Reset cache manager mocks
+      mockCacheManager.get.mockResolvedValue(null); // Default to cache miss
+      mockCacheManager.set.mockClear();
+      mockCacheManager.setSearchResult.mockClear();
+      // Reset CacheKeyGenerator mocks
+      (CacheKeyGenerator.generateSearchKey as jest.Mock).mockClear();
     });
     
     describe('searchHackerNews', () => {
@@ -349,13 +446,7 @@ describe('N8nClient', () => {
           data: {
             status: 'success' as const,
             data: {
-              hits: [],
-              nbHits: 0,
-              page: 0,
-              nbPages: 0,
-              hitsPerPage: 20,
-              processingTimeMS: 100,
-              query: 'test query'
+              items: []
             }
           }
         };
@@ -367,7 +458,8 @@ describe('N8nClient', () => {
           '/ideaforge/hackernews-search',
           {
             query: 'test query',
-            sessionId: 'session-123'
+            sessionId: 'session-123',
+            timestamp: expect.any(String)
           }
         );
         expect(result).toEqual(mockResponse.data);
@@ -375,7 +467,7 @@ describe('N8nClient', () => {
       
       it('should pass options when provided', async () => {
         const mockResponse = {
-          data: { status: 'success' as const, data: {} as any }
+          data: { status: 'success' as const, data: { items: [] } }
         };
         mockAxiosInstance.post.mockResolvedValue(mockResponse);
         
@@ -391,7 +483,8 @@ describe('N8nClient', () => {
           '/ideaforge/hackernews-search',
           {
             query: 'test',
-            sessionId: 'session-123'
+            sessionId: 'session-123',
+            timestamp: expect.any(String)
           }
         );
       });
@@ -401,8 +494,106 @@ describe('N8nClient', () => {
         
         const result = await client.searchHackerNews('test', 'session-123');
         
-        expect(result.status).toBe('error');
-        expect(result.error).toBe('Network error');
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toBe('Network error');
+      });
+      
+      it('should check cache before making request', async () => {
+        const cachedData = {
+          status: 'success' as const,
+          data: {
+            items: [
+              {
+                id: '123',
+                title: 'Cached Result',
+                url: 'https://example.com/cached',
+                text: 'Cached content',
+                author: 'cacheduser',
+                score: 100,
+                num_comments: 20,
+                created_at: new Date().toISOString(),
+                subreddit: '',
+                permalink: '',
+                is_comment: false
+              }
+            ]
+          },
+          metadata: {
+            cached: false,
+            requestDuration: 100
+          }
+        };
+        
+        mockCacheManager.get.mockResolvedValueOnce(cachedData);
+        
+        const result = await client.searchHackerNews('test', 'session-123');
+        
+        expect(CacheKeyGenerator.generateSearchKey).toHaveBeenCalledWith('hackernews', 'test', {
+          limit: undefined,
+          sortBy: undefined,
+          dateRange: undefined
+        });
+        expect(mockCacheManager.get).toHaveBeenCalled();
+        expect(mockAxiosInstance.post).not.toHaveBeenCalled(); // Should not make API call
+        expect(result).toEqual({
+          ...cachedData,
+          metadata: {
+            ...cachedData.metadata,
+            cached: true,
+            cacheKey: expect.any(String)
+          }
+        });
+      });
+      
+      it('should cache successful responses', async () => {
+        const responseData = {
+          status: 'success' as const,
+          success: true,
+          data: {
+            items: [
+              {
+                id: '123',
+                title: 'Fresh Result',
+                url: 'https://example.com/fresh',
+                text: 'Fresh content',
+                author: 'freshuser',
+                score: 100,
+                num_comments: 20,
+                created_at: new Date().toISOString(),
+                subreddit: '',
+                permalink: '',
+                is_comment: false
+              }
+            ]
+          }
+        };
+        
+        mockAxiosInstance.post.mockResolvedValue({ data: responseData });
+        
+        await client.searchHackerNews('test', 'session-123');
+        
+        expect(mockCacheManager.setSearchResult).toHaveBeenCalledWith(
+          'hackernews',
+          'test',
+          responseData,
+          1
+        );
+      });
+      
+      it('should not cache error responses', async () => {
+        mockAxiosInstance.post.mockResolvedValue({
+          data: {
+            success: false,
+            error: {
+              code: 'API_ERROR',
+              message: 'API error'
+            }
+          }
+        });
+        
+        await client.searchHackerNews('test', 'session-123');
+        
+        expect(mockCacheManager.setSearchResult).not.toHaveBeenCalled();
       });
     });
     
@@ -412,10 +603,7 @@ describe('N8nClient', () => {
           data: {
             status: 'success' as const,
             data: {
-              posts: [],
-              comments: [],
-              query: 'test query',
-              subreddits: []
+              items: []
             }
           }
         };
@@ -428,7 +616,8 @@ describe('N8nClient', () => {
           {
             query: 'test query',
             sessionId: 'session-123',
-            subreddits: []
+            subreddits: [],
+            timestamp: expect.any(String)
           }
         );
         expect(result).toEqual(mockResponse.data);
@@ -436,7 +625,7 @@ describe('N8nClient', () => {
       
       it('should pass subreddits when provided', async () => {
         const mockResponse = {
-          data: { status: 'success' as const, data: {} as any }
+          data: { status: 'success' as const, data: { items: [] } }
         };
         mockAxiosInstance.post.mockResolvedValue(mockResponse);
         
@@ -449,7 +638,8 @@ describe('N8nClient', () => {
           {
             query: 'test',
             sessionId: 'session-123',
-            subreddits: ['programming', 'typescript']
+            subreddits: ['programming', 'typescript'],
+            timestamp: expect.any(String)
           }
         );
       });
@@ -459,8 +649,114 @@ describe('N8nClient', () => {
         
         const result = await client.searchReddit('test', 'session-123');
         
-        expect(result.status).toBe('error');
-        expect(result.error).toBe('API error');
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toBe('API error');
+      });
+      
+      it('should check cache before making request', async () => {
+        const cachedData = {
+          status: 'success' as const,
+          data: {
+            items: [
+              {
+                id: 'cached123',
+                title: 'Cached Reddit Post',
+                text: 'Cached content',
+                url: 'https://reddit.com/r/test/cached123/',
+                author: 'testuser',
+                score: 100,
+                num_comments: 25,
+                created_at: new Date().toISOString(),
+                subreddit: 'test',
+                permalink: '/r/test/cached123/',
+                is_comment: false
+              }
+            ]
+          },
+          metadata: {
+            cached: false,
+            requestDuration: 100
+          }
+        };
+        
+        mockCacheManager.get.mockResolvedValueOnce(cachedData);
+        
+        const result = await client.searchReddit('test', 'session-123');
+        
+        expect(CacheKeyGenerator.generateSearchKey).toHaveBeenCalledWith('reddit', 'test', {
+          subreddits: undefined,
+          limit: undefined,
+          sortBy: undefined,
+          timeframe: undefined
+        });
+        expect(mockCacheManager.get).toHaveBeenCalled();
+        expect(mockAxiosInstance.post).not.toHaveBeenCalled(); // Should not make API call
+        expect(result).toEqual({
+          ...cachedData,
+          metadata: {
+            ...cachedData.metadata,
+            cached: true,
+            cacheKey: expect.any(String)
+          }
+        });
+      });
+      
+      it('should cache successful responses', async () => {
+        const responseData = {
+          status: 'success' as const,
+          success: true,
+          data: {
+            items: [
+              {
+                id: 'fresh123',
+                title: 'Fresh Reddit Post',
+                text: 'Fresh content',
+                url: 'https://reddit.com/r/programming/fresh123/',
+                author: 'freshuser',
+                score: 50,
+                num_comments: 10,
+                created_at: new Date().toISOString(),
+                subreddit: 'programming',
+                permalink: '/r/programming/fresh123/',
+                is_comment: false
+              }
+            ]
+          }
+        };
+        
+        mockAxiosInstance.post.mockResolvedValue({ data: responseData });
+        
+        await client.searchReddit('test', 'session-123', {
+          subreddits: ['programming']
+        });
+        
+        expect(mockCacheManager.setSearchResult).toHaveBeenCalledWith(
+          'reddit',
+          'test',
+          responseData,
+          1
+        );
+      });
+      
+      it('should generate cache key with subreddits', async () => {
+        mockAxiosInstance.post.mockResolvedValue({
+          data: { 
+            status: 'success' as const,
+            success: true,
+            data: { items: [] } 
+          }
+        });
+        
+        await client.searchReddit('test', 'session-123', {
+          subreddits: ['typescript', 'programming']
+        });
+        
+        expect(CacheKeyGenerator.generateSearchKey).toHaveBeenCalledWith('reddit', 'test', {
+          subreddits: ['typescript', 'programming'],
+          limit: undefined,
+          sortBy: undefined,
+          timeframe: undefined
+        });
       });
     });
     
@@ -507,29 +803,27 @@ describe('N8nClient', () => {
     
     it('should transform HackerNews results', async () => {
       const mockHNData = {
-        hits: [
+        items: [
           {
-            objectID: '12345',
+            id: '12345',
             title: 'Test Article',
             url: 'https://example.com',
             author: 'testuser',
-            points: 100,
+            score: 100,
             num_comments: 20,
             created_at: new Date().toISOString(),
-            _tags: ['story']
+            subreddit: '',
+            permalink: '',
+            is_comment: false,
+            text: 'Test Article content'
           }
-        ],
-        nbHits: 1,
-        page: 0,
-        nbPages: 1,
-        hitsPerPage: 20,
-        processingTimeMS: 50,
-        query: 'test'
+        ]
       };
       
       mockAxiosInstance.post.mockResolvedValue({
         data: {
-          status: 'success',
+          status: 'success' as const,
+          success: true,
           data: mockHNData,
           metadata: { cached: false, requestDuration: 100 }
         }
@@ -556,28 +850,28 @@ describe('N8nClient', () => {
     
     it('should transform Reddit results', async () => {
       const mockRedditData = {
-        posts: [
+        items: [
           {
             id: 'post123',
             title: 'Test Post',
-            selftext: 'Test content',
+            text: 'Test content',
             permalink: '/r/test/post123/',
+            url: 'https://reddit.com/r/test/post123/',
             author: 'testuser',
             subreddit: 'test',
-            ups: 50,
-            downs: 5,
-            upvote_ratio: 0.91,
+            score: 50,
             num_comments: 10,
-            created_utc: Math.floor(Date.now() / 1000)
+            created_at: new Date().toISOString(),
+            is_comment: false,
+            upvote_ratio: 0.91
           }
-        ],
-        query: 'test',
-        subreddits: ['test']
+        ]
       };
       
       mockAxiosInstance.post.mockResolvedValue({
         data: {
-          status: 'success',
+          status: 'success' as const,
+          success: true,
           data: mockRedditData,
           metadata: { cached: false, requestDuration: 100 }
         }
@@ -635,6 +929,112 @@ describe('N8nClient', () => {
       expect(transformer).toBeDefined();
       expect(transformer.transformHackerNewsResults).toBeDefined();
       expect(transformer.transformRedditResults).toBeDefined();
+    });
+  });
+  
+  describe('rate limiting functionality', () => {
+    let client: N8nClient;
+    const mockedRateLimitManager = rateLimitManager as jest.Mocked<typeof rateLimitManager>;
+    
+    beforeEach(() => {
+      client = new N8nClient();
+      jest.clearAllMocks();
+      // Reset checkAndWait to default behavior (resolve)
+      mockedRateLimitManager.checkAndWait.mockResolvedValue(undefined);
+    });
+    
+    describe('searchHackerNews with rate limiting', () => {
+      it('should check rate limit before making request', async () => {
+        const mockResponse = {
+          data: { status: 'success' as const, data: {} as any }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        await client.searchHackerNews('test', 'session-123');
+        
+        expect(mockedRateLimitManager.checkAndWait).toHaveBeenCalledWith('hackernews', 'session-123');
+        expect(mockedRateLimitManager.checkAndWait).toHaveBeenCalled();
+      });
+      
+      it('should prevent requests when rate limited', async () => {
+        // Simulate rate limiter blocking the request
+        mockedRateLimitManager.checkAndWait.mockRejectedValue(
+          new Error('Rate limit exceeded - please wait')
+        );
+        
+        const result = await client.searchHackerNews('test', 'session-123');
+        
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toBe('HackerNews API rate limit exceeded. Please try again later.');
+        expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      });
+    });
+    
+    describe('searchReddit with rate limiting', () => {
+      it('should check rate limit before making request', async () => {
+        const mockResponse = {
+          data: { status: 'success' as const, data: {} as any }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        await client.searchReddit('test', 'session-123');
+        
+        expect(mockedRateLimitManager.checkAndWait).toHaveBeenCalledWith('reddit', 'session-123');
+        expect(mockedRateLimitManager.checkAndWait).toHaveBeenCalled();
+      });
+      
+      it('should prevent requests when rate limited', async () => {
+        // Simulate rate limiter blocking the request
+        mockedRateLimitManager.checkAndWait.mockRejectedValue(
+          new Error('Rate limit exceeded - please wait')
+        );
+        
+        const result = await client.searchReddit('test', 'session-123');
+        
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toBe('Reddit API rate limit exceeded. Please try again later.');
+        expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      });
+    });
+    
+    describe('getRateLimitStats', () => {
+      it('should return rate limit statistics', () => {
+        const stats = client.getRateLimitStats();
+        
+        expect(mockedRateLimitManager.getAllStats).toHaveBeenCalled();
+        expect(stats).toHaveProperty('hackerNews');
+        expect(stats).toHaveProperty('reddit');
+        expect(stats.hackerNews.currentRequests).toBe(5);
+        expect(stats.hackerNews.isBlocked).toBe(false);
+        expect(stats.reddit.currentRequests).toBe(2);
+        expect(stats.reddit.isBlocked).toBe(false);
+      });
+      
+      it('should return current stats on each call', () => {
+        // First call
+        let stats = client.getRateLimitStats();
+        expect(stats.hackerNews.currentRequests).toBe(5);
+        
+        // Update mock to return different stats
+        mockedRateLimitManager.getAllStats.mockReturnValue({
+          hackerNews: { 
+            currentRequests: 10, 
+            isBlocked: false,
+            oldestRequest: Date.now() - 300000,
+            newestRequest: Date.now() - 1000
+          },
+          reddit: { 
+            currentRequests: 5, 
+            isBlocked: false,
+            oldestRequest: Date.now() - 60000,
+            newestRequest: Date.now() - 5000
+          }
+        });
+        
+        // Second call should return updated stats
+        stats = client.getRateLimitStats();
+        expect(stats.hackerNews.currentRequests).toBe(10);
+      });
     });
   });
 }); 

@@ -11,7 +11,8 @@
 - `src/utils/retry-handler.ts` - Retry logic with exponential backoff
 - `tests/utils/retry-handler.test.ts` - Retry handler tests
 - `src/services/cache-manager.ts` - Response caching implementation (TODO)
-- `src/utils/rate-limiter.ts` - Rate limiting utility (TODO)
+- `src/utils/rate-limiter.ts` - Rate limiting utility with sliding window algorithm
+- `tests/utils/rate-limiter.test.ts` - Rate limiter unit tests
 - `src/agents/bridges/n8n-bridge.ts` - LangGraph to n8n communication bridge
 - `tests/agents/bridges/n8n-bridge.test.ts` - Bridge unit tests
 - `n8n-workflows/hackernews-search.json` - n8n workflow for HN integration
@@ -22,6 +23,8 @@
 - `scripts/verify-hn-response.js` - Workflow verification script
 - `scripts/test-reddit-webhook.js` - Reddit webhook test script
 - `scripts/verify-reddit-oauth.js` - Reddit OAuth verification script
+- `scripts/add-rate-limiting-to-workflows.js` - Script to add rate limiting nodes to workflows
+- `scripts/test-rate-limiting.js` - Rate limiting test script
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
 - `.env.example` - Environment variables template
 
@@ -72,12 +75,12 @@
   - [x] 5.4.7 Verify rate limit compliance
 
 - [ ] 5.5 Add rate limiting and caching
-  - [ ] 5.5.1 Implement rate limiter utility
-  - [ ] 5.5.2 Add rate limiting to n8n workflows
-  - [ ] 5.5.3 Create cache manager service
-  - [ ] 5.5.4 Implement cache key generation
-  - [ ] 5.5.5 Add TTL-based expiration
-  - [ ] 5.5.6 Build cache warming logic
+  - [x] 5.5.1 Implement rate limiter utility
+  - [x] 5.5.2 Add rate limiting to n8n workflows
+  - [x] 5.5.3 Create cache manager service
+  - [x] 5.5.4 Implement cache key generation
+  - [x] 5.5.5 Add TTL-based expiration (Fixed failing n8n-client tests)
+  - [x] 5.5.6 Build cache warming logic
   - [ ] 5.5.7 Add monitoring and metrics
   - [ ] 5.5.8 Test under load conditions
 

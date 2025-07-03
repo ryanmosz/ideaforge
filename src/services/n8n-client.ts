@@ -6,12 +6,17 @@ import {
   HNSearchResults,
   RedditSearchOptions,
   RedditSearchResults,
-  HealthCheckResponse
+  HealthCheckResponse,
+  SearchResponse
 } from '../types/n8n-types';
 import { getN8nConfig } from '../config/n8n-config';
 import { RetryHandler, RetryConfig } from '../utils/retry-handler';
 import { ResponseTransformer } from './response-transformer';
 import { ResearchResult } from '../agents/types/research-types';
+import { rateLimitManager } from '../utils/rate-limiter';
+import { CacheKeyGenerator } from '../utils/cache-key-generator';
+import { CircuitBreaker } from '../utils/circuit-breaker';
+import { SmartCacheManager } from './smart-cache-manager';
 
 /**
  * Client for communicating with n8n webhooks
@@ -21,6 +26,8 @@ export class N8nClient {
   private config: N8nConfig;
   private retryHandler: RetryHandler;
   private transformer: ResponseTransformer;
+  private circuitBreaker: CircuitBreaker;
+  private cacheManager: SmartCacheManager;
   
   constructor(config?: Partial<N8nConfig>, retryConfig?: Partial<RetryConfig>) {
     // Merge provided config with environment config
@@ -47,6 +54,19 @@ export class N8nClient {
     
     // Create response transformer
     this.transformer = new ResponseTransformer();
+    
+    // Initialize dependencies
+    this.circuitBreaker = new CircuitBreaker('n8n-api', {
+      failureThreshold: 5,
+      resetTimeout: 60000, // 1 minute
+      successThreshold: 2,
+      windowSize: 120000 // 2 minutes
+    });
+    
+    this.cacheManager = new SmartCacheManager({
+      maxSize: 100 * 1024 * 1024, // 100MB
+      popularityThreshold: 10
+    });
     
     this.setupInterceptors();
   }
@@ -121,6 +141,13 @@ export class N8nClient {
   }
   
   /**
+   * Get rate limit statistics for all APIs
+   */
+  getRateLimitStats(): Record<string, any> {
+    return rateLimitManager.getAllStats();
+  }
+  
+  /**
    * Test connectivity to n8n
    */
   async testConnection(): Promise<boolean> {
@@ -133,71 +160,175 @@ export class N8nClient {
   }
   
   /**
-   * Search Hacker News for relevant content
+   * Search HackerNews via n8n webhook
    */
   async searchHackerNews(
     query: string, 
     sessionId: string,
-    _options?: HNSearchOptions  // TODO: Use when n8n webhooks support options
-  ): Promise<N8nResponse<HNSearchResults>> {
-    // TODO: When n8n webhooks support advanced options, use this:
-    // const request: N8nRequest<HNSearchPayload> = {
-    //   action: 'searchHackerNews',
-    //   payload: {
-    //     query,
-    //     options: {
-    //       limit: options?.limit || 20,
-    //       dateRange: options?.dateRange || 'all',
-    //       sortBy: options?.sortBy || 'relevance',
-    //       tags: options?.tags || ['story', 'comment']
-    //     }
-    //   },
-    //   sessionId,
-    //   metadata: this.createMetadata()
-    // };
+    options?: HNSearchOptions
+  ): Promise<SearchResponse> {
+    const endpoint = '/ideaforge/hackernews-search';
     
-    // For now, we just pass query and sessionId as the webhook expects
-    const simplifiedRequest = {
+    // Generate cache key
+    const cacheKey = CacheKeyGenerator.generateSearchKey('hackernews', query, {
+      limit: options?.limit,
+      sortBy: options?.sortBy,
+      dateRange: options?.dateRange
+    });
+    
+    // Check cache first
+    const cached = await this.cacheManager.get<SearchResponse>(cacheKey);
+    if (cached) {
+      console.log(`[N8nClient] Cache hit for HackerNews query: "${query}"`);
+      return {
+        ...cached,
+        metadata: {
+          ...cached.metadata,
+          cached: true,
+          cacheKey
+        }
+      };
+    }
+    
+    // Check rate limits
+    try {
+      await rateLimitManager.checkAndWait('hackernews', sessionId);
+    } catch (error) {
+      console.warn('[N8nClient] Rate limit exceeded for HackerNews API');
+      return {
+        success: false,
+        data: { items: [] },
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'HackerNews API rate limit exceeded. Please try again later.'
+        },
+        metadata: {
+          source: 'hackernews',
+          query,
+          timestamp: new Date().toISOString(),
+          cached: false
+        }
+      };
+    }
+    
+    const request = {
       query,
-      sessionId
+      sessionId,
+      timestamp: new Date().toISOString()
     };
     
-    return this.post<HNSearchResults>('/ideaforge/hackernews-search', simplifiedRequest);
+    try {
+      const response = await this.executeRequest<SearchResponse>(
+        endpoint, 
+        request,
+        `HackerNews search: ${query}`
+      );
+      
+      if (response.success && response.data) {
+        // Cache the successful response with smart TTL
+        const resultCount = response.data.items?.length || 0;
+        await this.cacheManager.setSearchResult(
+          'hackernews',
+          query,
+          response,
+          resultCount
+        );
+        
+        console.log(`[N8nClient] Cached HackerNews results for query: "${query}" (${resultCount} items)`);
+      }
+      
+      return response;
+    } catch (error) {
+      // Return error response instead of throwing
+      return this.createErrorResponse(error, 'hackernews', query);
+    }
   }
   
   /**
-   * Search Reddit for relevant content
+   * Search Reddit via n8n webhook
    */
   async searchReddit(
     query: string,
     sessionId: string,
     options?: RedditSearchOptions
-  ): Promise<N8nResponse<RedditSearchResults>> {
-    // TODO: When n8n webhooks support advanced options, use this:
-    // const request: N8nRequest<RedditSearchPayload> = {
-    //   action: 'searchReddit',
-    //   payload: {
-    //     query,
-    //     subreddits: options?.subreddits || [],
-    //     options: {
-    //       sortBy: options?.sortBy || 'relevance',
-    //       timeframe: options?.timeframe || 'all',
-    //       limit: options?.limit || 25,
-    //       includeComments: options?.includeComments ?? true
-    //     }
-    //   },
-    //   sessionId,
-    //   metadata: this.createMetadata()
-    // };
+  ): Promise<SearchResponse> {
+    const endpoint = '/ideaforge/reddit-search';
     
-    // For now, we pass query, sessionId, and subreddits as the webhook expects
-    const simplifiedRequest = {
+    // Generate cache key
+    const cacheKey = CacheKeyGenerator.generateSearchKey('reddit', query, {
+      subreddits: options?.subreddits,
+      limit: options?.limit,
+      sortBy: options?.sortBy,
+      timeframe: options?.timeframe
+    });
+    
+    // Check cache first
+    const cached = await this.cacheManager.get<SearchResponse>(cacheKey);
+    if (cached) {
+      console.log(`[N8nClient] Cache hit for Reddit query: "${query}"`);
+      return {
+        ...cached,
+        metadata: {
+          ...cached.metadata,
+          cached: true,
+          cacheKey
+        }
+      };
+    }
+    
+    // Check rate limits
+    try {
+      await rateLimitManager.checkAndWait('reddit', sessionId);
+    } catch (error) {
+      console.warn('[N8nClient] Rate limit exceeded for Reddit API');
+      return {
+        success: false,
+        data: { items: [] },
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Reddit API rate limit exceeded. Please try again later.'
+        },
+        metadata: {
+          source: 'reddit',
+          query,
+          timestamp: new Date().toISOString(),
+          cached: false
+        }
+      };
+    }
+    
+    const request = {
       query,
       sessionId,
-      subreddits: options?.subreddits || []
+      subreddits: options?.subreddits || [],
+      timestamp: new Date().toISOString()
     };
     
-    return this.post<RedditSearchResults>('/ideaforge/reddit-search', simplifiedRequest);
+    try {
+      const response = await this.executeRequest<SearchResponse>(
+        endpoint,
+        request,
+        `Reddit search: ${query}`
+      );
+      
+      if (response.success && response.data) {
+        // Cache the successful response with smart TTL
+        const resultCount = response.data.items?.length || 0;
+        await this.cacheManager.setSearchResult(
+          'reddit',
+          query,
+          response,
+          resultCount
+        );
+        
+        console.log(`[N8nClient] Cached Reddit results for query: "${query}" (${resultCount} items)`);
+      }
+      
+      return response;
+    } catch (error) {
+      // Return error response instead of throwing
+      return this.createErrorResponse(error, 'reddit', query);
+    }
   }
   
   /**
@@ -217,12 +348,34 @@ export class N8nClient {
   ): Promise<ResearchResult[]> {
     const response = await this.searchHackerNews(query, sessionId, options);
     
-    if (response.status === 'error' || !response.data) {
-      console.error(`[N8n Client] HackerNews search failed: ${response.error}`);
+    if (!response.success || !response.data) {
+      console.error(`[N8n Client] HackerNews search failed: ${response.error?.message}`);
       return [];
     }
     
-    return this.transformer.transformHackerNewsResults(response.data);
+    // Transform the unified response to HNSearchResults format for the transformer
+    const hnResults: HNSearchResults = {
+      hits: response.data.items.map(item => ({
+        objectID: item.id,
+        title: item.title || '',
+        url: item.url,
+        author: item.author || '',
+        created_at: item.created_at || '',
+        points: item.score || 0,
+        num_comments: item.num_comments || 0,
+        _highlightResult: {
+          title: { value: item.title || '' }
+        }
+      })),
+      nbHits: response.data.items.length,
+      page: 0,
+      nbPages: 1,
+      hitsPerPage: response.data.items.length,
+      processingTimeMS: 0,
+      query: query
+    };
+    
+    return this.transformer.transformHackerNewsResults(hnResults);
   }
   
   /**
@@ -235,24 +388,110 @@ export class N8nClient {
   ): Promise<ResearchResult[]> {
     const response = await this.searchReddit(query, sessionId, options);
     
-    if (response.status === 'error' || !response.data) {
-      console.error(`[N8n Client] Reddit search failed: ${response.error}`);
+    if (!response.success || !response.data) {
+      console.error(`[N8n Client] Reddit search failed: ${response.error?.message}`);
       return [];
     }
     
-    return this.transformer.transformRedditResults(response.data);
+    // Transform the unified response to RedditSearchResults format for the transformer
+    const redditResults: RedditSearchResults = {
+      posts: response.data.items.filter(item => !item.is_comment).map(item => ({
+        id: item.id,
+        title: item.title || '',
+        selftext: item.text || '',
+        permalink: item.permalink || `/r/${item.subreddit || 'unknown'}/comments/${item.id}/`,
+        url: item.url || '',
+        author: item.author || '[deleted]',
+        created_utc: Math.floor(new Date(item.created_at || '').getTime() / 1000),
+        score: item.score || 0,
+        ups: item.score || 0,
+        downs: 0,
+        num_comments: item.num_comments || 0,
+        subreddit: item.subreddit || '',
+        upvote_ratio: item.upvote_ratio || 1
+      })),
+      comments: response.data.items.filter(item => item.is_comment).map(item => ({
+        id: item.id,
+        body: item.text || '',
+        permalink: item.permalink || `/r/${item.subreddit || 'unknown'}/comments/${item.link_id}/comment/${item.id}/`,
+        author: item.author || '[deleted]',
+        created_utc: Math.floor(new Date(item.created_at || '').getTime() / 1000),
+        score: item.score || 0,
+        ups: item.score || 0,
+        downs: 0,
+        subreddit: item.subreddit || '',
+        link_title: item.link_title || '',
+        link_id: item.link_id || '',
+        parent_id: item.parent_id || ''
+      })),
+      query: query,
+      subreddits: options?.subreddits || []
+    };
+    
+    return this.transformer.transformRedditResults(redditResults);
   }
   
-  // /**
-  //  * Create metadata for requests
-  //  */
-  // private createMetadata() {
-  //   return {
-  //     timestamp: Date.now(),
-  //     version: '1.0.0',
-  //     source: 'langgraph-agent'
-  //   };
-  // }
+  /**
+   * Get cache statistics
+   */
+  getCacheStats() {
+    const stats = this.cacheManager.getStats();
+    const effectiveness = this.cacheManager.getCacheEffectiveness();
+    const popularQueries = this.cacheManager.getPopularQueries();
+    const trendingQueries = this.cacheManager.getTrendingQueries();
+    
+    return {
+      ...stats,
+      effectiveness,
+      popularQueries,
+      trendingQueries
+    };
+  }
+  
+  /**
+   * Execute a request with circuit breaker and retry logic
+   */
+  private async executeRequest<T>(
+    endpoint: string,
+    data: any,
+    operation: string
+  ): Promise<T> {
+    return this.circuitBreaker.execute(
+      async () => {
+        return this.retryHandler.execute(
+          async () => {
+            const response = await this.client.post<T>(endpoint, data);
+            return response.data;
+          },
+          operation
+        );
+      }
+    );
+  }
+  
+  /**
+   * Create an error response
+   */
+  private createErrorResponse(
+    error: any,
+    source: string,
+    query: string
+  ): SearchResponse {
+    return {
+      success: false,
+      data: { items: [] },
+      error: {
+        code: error.code || 'UNKNOWN_ERROR',
+        message: error.message || 'An unknown error occurred'
+      },
+      metadata: {
+        source,
+        query,
+        timestamp: new Date().toISOString(),
+        cached: false
+      }
+    };
+  }
   
   /**
    * Make a POST request to an n8n webhook
@@ -303,4 +542,5 @@ export class N8nClient {
       }
     };
   }
-} 
+}
+   
