@@ -13,8 +13,8 @@ describe('Environment Configuration Validation', () => {
   beforeEach(() => {
     // Reset modules to ensure fresh config loading
     jest.resetModules();
-    // Clear environment
-    process.env = {};
+    // Clear environment and set NODE_ENV=test to skip .env loading
+    process.env = { NODE_ENV: 'test' };
   });
 
   afterEach(() => {
@@ -85,6 +85,8 @@ describe('Environment Configuration Validation', () => {
     });
 
     it('should use default NODE_ENV when not provided', () => {
+      // Reset env without NODE_ENV to test default
+      process.env = {};
       process.env.OPENAI_API_KEY = 'test-key';
       process.env.N8N_WEBHOOK_URL = 'https://webhook.url';
       
@@ -188,6 +190,8 @@ LOG_LEVEL=warn
 NODE_ENV=staging
 `);
       
+      // Clear NODE_ENV and set DOTENV_CONFIG_PATH
+      process.env = {};
       process.env.DOTENV_CONFIG_PATH = testEnvPath;
       
       // Clear require cache and reload

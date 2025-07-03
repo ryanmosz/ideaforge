@@ -2,8 +2,11 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load .env file - support custom path for testing
-const envPath = process.env.DOTENV_CONFIG_PATH || path.resolve(process.cwd(), '.env');
-dotenv.config({ path: envPath });
+// Skip loading .env in test environment unless explicitly specified
+if (process.env.NODE_ENV !== 'test' || process.env.DOTENV_CONFIG_PATH) {
+  const envPath = process.env.DOTENV_CONFIG_PATH || path.resolve(process.cwd(), '.env');
+  dotenv.config({ path: envPath });
+}
 
 interface Config {
   openaiApiKey: string;

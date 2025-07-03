@@ -128,7 +128,8 @@ describe('CLI Executable Tests', () => {
     });
 
     it('should show error when .env is missing for actual commands', (done) => {
-      const proc = spawn('node', [cliPath, 'init'], {
+      // Use 'analyze' command which actually requires environment variables
+      const proc = spawn('node', [cliPath, 'analyze', 'test.org'], {
         env: { ...process.env, NODE_ENV: 'test' }
       });
 

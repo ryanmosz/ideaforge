@@ -13,10 +13,12 @@ import { VisualizeCommand } from './commands/visualize';
 import dotenv from 'dotenv';
 
 // Load environment variables
-// Support DOTENV_CONFIG_PATH for testing
-dotenv.config({
-  path: process.env.DOTENV_CONFIG_PATH
-});
+// Skip loading .env in test environment unless explicitly specified
+if (process.env.NODE_ENV !== 'test' || process.env.DOTENV_CONFIG_PATH) {
+  dotenv.config({
+    path: process.env.DOTENV_CONFIG_PATH
+  });
+}
 
 // Create main program
 const program = new Command();
@@ -64,7 +66,7 @@ const hasHelpFlag = args.includes('--help') || args.includes('-h');
 // Only check config if we have a command AND not asking for help
 if (hasCommand && !hasHelpFlag) {
   // Check for required environment variables
-  const requiredEnvVars = ['OPENAI_API_KEY'];
+  const requiredEnvVars = ['OPENAI_API_KEY', 'N8N_WEBHOOK_URL'];
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
