@@ -35,7 +35,7 @@
   - [x] 5.1.7 Export and version control workflows
   - [x] 5.1.8 Document webhook URLs and setup
 
-- [ ] 5.2 Build communication bridge to LangGraph
+- [x] 5.2 Build communication bridge to LangGraph
   - [x] 5.2.1 Create n8n client service class
   - [x] 5.2.2 Implement webhook request methods
   - [x] 5.2.3 Add timeout and retry logic
@@ -43,7 +43,7 @@
   - [x] 5.2.5 Build LangGraph bridge interface
   - [x] 5.2.6 Implement session correlation
   - [x] 5.2.7 Add error handling and fallbacks
-  - [ ] 5.2.8 Write comprehensive unit tests
+  - [x] 5.2.8 Write comprehensive unit tests
 
 - [ ] 5.3 Implement Hacker News API integration
   - [ ] 5.3.1 Add HN search nodes to n8n workflow
