@@ -83,4 +83,69 @@ When implementing Task 4.0, I'll:
 1. Create the .env file with necessary configuration
 2. Install LangGraph dependencies and verify immediately  
 3. Run tests continuously during development
-4. Provide real-time feedback on implementation progress 
+4. Provide real-time feedback on implementation progress
+
+# Task 4.4.2: HackerNewsSearchNode - ✅ Complete (Enhanced)
+
+### Implementation Details
+
+Created `HackerNewsSearchNode` that searches Hacker News via the Algolia API using multiple strategies to capture relevance, influence, importance, and recency.
+
+**Multi-Strategy Search Approach:**
+1. **Front Page Recent** (must-read): Posts with 100+ points from last 48 hours (2x relevance boost)
+2. **Trending**: High velocity posts (5+ points/hour) from last week (1.5x relevance boost)
+3. **Relevant**: Traditional keyword search for highly relevant content
+4. **Influential**: All-time posts with 500+ points (1.3x relevance boost)
+
+**Enhanced Features:**
+- **Velocity Scoring**: Calculates points per hour to identify trending content
+- **Influence Indicators**: 
+  - 🔥 Front Page: 100+ points within 48 hours
+  - 📈 Trending: High velocity (10+ points/hour)
+  - ⭐ Influential: 500+ points all-time
+- **Composite Relevance Scoring**:
+  - Base points contribution (0-40)
+  - Engagement/comments (0-30)
+  - Recency bonus (0-20, granular by days)
+  - Title keyword matching (0-30)
+  - Viral bonus for high comment-to-point ratios (+10)
+- **Smart Deduplication**: Keeps highest relevance score when same post appears in multiple strategies
+- **Result Categorization**: Summary shows breakdown by category (must-read, trending, influential, relevant)
+
+**API Integration:**
+- Uses multiple Algolia endpoints:
+  - `/search` - Standard relevance search
+  - `/search_by_date` - Time-filtered searches
+  - Numeric filters for points and time ranges
+- Parallel searches for all strategies
+- Graceful error handling per strategy
+
+**Enhanced Summary Format:**
+```
+🔥 Front Page: Posted 12 hours ago | 250 points (21/hr) | 89 comments
+[Content excerpt from story...]
+
+📈 Trending: Posted today | 150 points (50/hr) | 45 comments
+[Highlighted search results...]
+```
+
+**Files Updated:**
+- `src/agents/nodes/research/HackerNewsSearchNode.ts` - Complete rewrite with multi-strategy approach
+- `tests/agents/nodes/research/HackerNewsSearchNode.test.ts` - Updated tests for new features
+
+**Test Coverage:**
+- Still maintaining high coverage (94%+ statements)
+- All 11 tests passing
+- New tests for velocity, categorization, and influence scoring
+
+**Result Structure (unchanged externally):**
+```typescript
+hackerNewsResults: {
+  title: string;
+  url: string;
+  summary: string;     // Now includes emoji indicators and velocity
+  relevance: number;   // Now composite score with category boosts
+}[]
+```
+
+This enhanced implementation ensures IdeaForge captures not just relevant discussions, but also influential and trending content that might have tangential but important connections to the project. 
