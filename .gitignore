@@ -38,6 +38,10 @@ analysis-*.org
 *.png
 *.svg
 
+# Load test reports
+load-test-report-*.txt
+test-reports/
+
 # OS files
 Thumbs.db
 
