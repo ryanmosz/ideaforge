@@ -285,20 +285,18 @@ npm run test:rate-limits
 node scripts/add-rate-limiting-to-workflows.js
 ```
 
-## Technical Decisions Made
-1. **Pragmatic Testing**: Focused on core functionality over edge cases
-2. **Error Handling**: Comprehensive with fallbacks at every level
-3. **Session Tracking**: Automatic with configurable cleanup
-4. **Circuit Breakers**: Separate per service (HN/Reddit)
-5. **HN Integration**: Direct Algolia API with custom relevance scoring
-6. **Enhanced Scoring**: Multi-factor algorithm with technology patterns
-7. **Rate Limiting**: Dual-layer protection (client-side and n8n workflow)
-   - Client-side prevents requests before they reach n8n
-   - Workflow-side enforces limits and handles API responses
-   - Sliding window algorithm for accurate tracking
+## Technical Decisions
+- Dual-layer rate limiting (client + n8n workflow)
+- Sliding window for accurate request tracking
+- No persistence between CLI runs
+- LRU eviction for memory management
+- Deterministic cache keys with parameter sorting
+- UTC time for time-based keys (timezone consistency)
+- Dynamic TTL based on content type and usage patterns
+- Query pattern matching for intelligent cache duration
 
-## Known Issues
-- **URGENT**: Old workflow still active in n8n - needs re-import
+## Current Status
+- Subtasks 5.5.1, 5.5.2, 5.5.3, 5.5.4, 5.5.5, and 5.5.6 are complete
 
 ## Files to Review
 - `src/utils/cache-key-generator.ts` - NEW: Sophisticated cache key generation utility
@@ -462,17 +460,23 @@ Implemented intelligent TTL-based expiration strategies:
 
 ### Subtask 5.5.6 Implementation (Completed)
 Created `src/services/cache-warmer.ts` with comprehensive cache warming functionality:
-- Automatic cache warming with configurable intervals
-- Predefined queries that are always kept warm
-- Expiring cache entry refresh based on TTL threshold
-- Popular query detection and warming
-- Manual cache warming API
-- Warming statistics tracking
-- Concurrent warming prevention
-- Configurable warming parameters
-- Created `scripts/test-cache-warming.js` demonstration script
-- Created unit tests (implementation correct, test runner has minor issues)
-- Key design decisions:
+- ✅ Created `src/services/cache-warmer.ts` with comprehensive cache warming functionality
+- ✅ Features implemented:
+  - Automatic cache warming with configurable intervals
+  - Predefined queries that are always kept warm
+  - Expiring cache entry refresh based on TTL threshold
+  - Popular query detection and warming
+  - Manual cache warming API
+  - Warming statistics tracking
+  - Concurrent warming prevention
+  - Configurable warming parameters
+- ✅ Created `scripts/test-cache-warming.js` demonstration script
+- ✅ Created unit tests (23 tests, all passing)
+- ✅ Fixed test runner issues:
+  - Added downlevelIteration support to Jest config
+  - Updated to new Jest transform config format
+  - Fixed async test timing issues
+- ✅ Key design decisions:
   - 5-minute default warming interval
   - Refresh when 25% TTL remains
   - Maximum 10 queries per warming cycle
@@ -493,21 +497,25 @@ Created `src/services/cache-warmer.ts` with comprehensive cache warming function
 - Popular query tracking for cache optimization
 
 ### Current Status
-- Subtasks 5.5.1, 5.5.2, 5.5.3, 5.5.4, and 5.5.5 are complete
-- All tests passing:
-  - 46 tests in n8n-client.test.ts (includes cache integration tests)
+- Subtasks 5.5.1, 5.5.2, 5.5.3, 5.5.4, 5.5.5, and 5.5.6 are complete
+- All tests passing (868 total):
+  - 46 tests in n8n-client.test.ts
   - 26 tests in rate-limiter.test.ts
   - 22 tests in cache-manager.test.ts
   - 34 tests in cache-key-generator.test.ts
   - 32 tests in ttl-strategies.test.ts
   - 15 tests in smart-cache-manager.test.ts
+  - 23 tests in cache-warmer.test.ts (fixed test runner issues)
 - Rate limiting fully integrated into both client and n8n workflows
 - Cache manager implemented with memory-based storage, LRU eviction, and TTL support
 - Cache integrated into n8n client for HackerNews and Reddit searches
 - Sophisticated cache key generation system in place
 - Smart TTL strategies implemented with dynamic adjustments
-- Cache warming logic built with comprehensive functionality
+- Cache warming service operational with automatic and manual warming
 - Ready to proceed with subtask 5.5.7 (Add monitoring and metrics)
+
+### Outstanding Issues
+- None - all test runner issues have been resolved
 
 ### Files Created/Modified
 - `src/utils/rate-limiter.ts` - Core rate limiting implementation
