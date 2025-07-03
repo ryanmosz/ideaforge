@@ -8,9 +8,9 @@ IdeaForge is a CLI tool that transforms project ideas into actionable developmen
 ## Current Task Status
 
 ### Active Parent Task: 5.0 - Develop n8n integration for external APIs
-**Status**: Task 5.1 Complete, Ready for Task 5.2
+**Status**: Task 5.1 Complete, Task 5.2 In Progress (5.2.6)
 **Location**: Feature branch `feature/task-5.0-n8n-integration`
-**Progress**: 1 of 6 main tasks complete
+**Progress**: 1 of 6 main tasks complete, working on 5.2.6
 
 #### Recent Progress:
 1. **Documentation Updates (Just Completed)**:
@@ -192,12 +192,38 @@ All n8n webhook endpoints created and documented:
   - Created 22 comprehensive tests (all passing)
   - Total: 68 passing tests across n8n integration
 
+### Current Work - Task 5.2.6: Implement session correlation
+**Status**: Implementation complete, fixing failing tests
+
+#### What's Been Done:
+1. **SessionTracker Service Created**:
+   - Full implementation in `src/services/session-tracker.ts`
+   - Tracks requests, errors, response times per session
+   - Automatic cleanup of expired sessions
+   - Session metrics and aggregate statistics
+   - All 28 tests passing
+
+2. **N8nBridge Updated**:
+   - Integrated SessionTracker into N8nBridge
+   - Added session tracking to all research methods
+   - Session metrics exposed via getSessionMetrics() and getStats()
+   - Export session data capability for debugging
+
+3. **State Management Updated**:
+   - Added sessionId to ProjectState interface
+   - Added sessionId channel to state-annotations.ts
+
+#### Current Issues:
+- 4 failing tests in n8n-bridge.test.ts:
+  - Error message mismatch in failure scenarios
+  - Timer handling issue in batch delay test
+  - Failure tracking not incrementing correctly
+
 ### Next Immediate Steps:
-**Continue Task 5.2 with subtask 5.2.6: Implement session correlation**
-1. Create session tracking service
-2. Track requests across sessions for debugging
-3. Implement session metadata storage
-4. Add session correlation to N8nBridge
+1. Fix the 4 failing tests in n8n-bridge.test.ts
+2. Verify all tests pass
+3. Commit the session correlation implementation
+4. Mark subtask 5.2.6 as complete
 
 ### n8n Integration Clarification:
 - Current code has a placeholder `N8N_WEBHOOK_URL` that isn't implemented yet

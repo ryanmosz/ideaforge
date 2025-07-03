@@ -10,6 +10,9 @@ export interface ProjectState {
   filePath: string;
   fileContent: string;
   
+  // Session tracking
+  sessionId?: string;
+  
   // Parsed document structure
   requirements: Requirement[];
   userStories: UserStory[];

@@ -1,5 +1,6 @@
 import { N8nClient } from '../../services/n8n-client';
 import { ResponseTransformer } from '../../services/response-transformer';
+import { SessionTracker } from '../../services/session-tracker';
 import { ProjectState } from '../state';
 import { ResearchResult, ResearchSummary } from '../types/research-types';
 
@@ -8,6 +9,9 @@ export interface N8nBridgeConfig {
   transformer?: ResponseTransformer;
   cacheResults?: boolean;
   maxResultsPerSource?: number;
+  maxConcurrentRequests?: number;
+  batchDelay?: number;
+  sessionTrackerMaxAge?: number;
 }
 
 /**
@@ -17,6 +21,7 @@ export interface N8nBridgeConfig {
 export class N8nBridge {
   private client: N8nClient;
   private transformer: ResponseTransformer;
+  private sessionTracker: SessionTracker;
   private config: Required<N8nBridgeConfig>;
   
   constructor(config?: N8nBridgeConfig) {
@@ -24,89 +29,128 @@ export class N8nBridge {
       client: config?.client || new N8nClient(),
       transformer: config?.transformer || new ResponseTransformer(),
       cacheResults: config?.cacheResults ?? true,
-      maxResultsPerSource: config?.maxResultsPerSource || 10
+      maxResultsPerSource: config?.maxResultsPerSource || 10,
+      maxConcurrentRequests: config?.maxConcurrentRequests || 5,
+      batchDelay: config?.batchDelay || 1000, // 1 second between batches
+      sessionTrackerMaxAge: config?.sessionTrackerMaxAge || 300000 // 5 minutes
     };
     
     this.client = this.config.client;
     this.transformer = this.config.transformer;
+    this.sessionTracker = new SessionTracker(this.config.sessionTrackerMaxAge);
   }
   
   /**
-   * Research a single technology using HackerNews and Reddit
+   * Research a single technology using both HN and Reddit
    */
   async researchTechnology(
     technology: string,
-    sessionId: string = 'default'
+    context: ProjectState
   ): Promise<ResearchSummary> {
-    console.log(`[N8n Bridge] Researching technology: ${technology}`);
+    const sessionId = context.sessionId || 'default';
+    const startTime = Date.now();
     
-    const results: ResearchResult[] = [];
-    
-    // Parallel research across sources
-    const [hnResults, redditResults] = await Promise.allSettled([
-      this.searchHackerNews(technology, sessionId),
-      this.searchReddit(technology, sessionId)
-    ]);
-    
-    // Process HN results
-    if (hnResults.status === 'fulfilled') {
-      results.push(...hnResults.value.slice(0, this.config.maxResultsPerSource));
-    } else {
-      console.error('[N8n Bridge] HackerNews search failed:', hnResults.reason);
+    try {
+      console.log(`[N8n Bridge] Researching ${technology} for session ${sessionId}`);
+      
+      // Search both sources in parallel using allSettled to handle individual failures
+      const [hnResult, redditResult] = await Promise.allSettled([
+        this.searchHackerNews(technology, sessionId),
+        this.searchReddit(technology, sessionId)
+      ]);
+      
+      // Extract successful results
+      const hnResults = hnResult.status === 'fulfilled' ? hnResult.value : [];
+      const redditResults = redditResult.status === 'fulfilled' ? redditResult.value : [];
+      
+      // Track failures
+      if (hnResult.status === 'rejected') {
+        this.sessionTracker.trackError(
+          sessionId,
+          hnResult.reason,
+          `HackerNews search failed for query: ${technology}`
+        );
+      }
+      
+      if (redditResult.status === 'rejected') {
+        this.sessionTracker.trackError(
+          sessionId,
+          redditResult.reason,
+          `Reddit search failed for query: ${technology}`
+        );
+      }
+      
+      // If both sources failed completely, throw to trigger the catch block
+      if (hnResult.status === 'rejected' && redditResult.status === 'rejected') {
+        throw new Error('All research sources failed');
+      }
+      
+      // Combine and analyze results
+      const allResults = [...hnResults, ...redditResults];
+      const topResults = this.selectTopResults(allResults);
+      const insights = this.extractInsights(allResults);
+      const recommendations = this.generateRecommendations(allResults, technology);
+      
+      const responseTime = Date.now() - startTime;
+      this.sessionTracker.trackSuccess(sessionId, technology, responseTime);
+      
+      return {
+        query: technology,
+        timestamp: Date.now(),
+        totalResults: allResults.length,
+        topResults,
+        insights,
+        recommendations
+      };
+    } catch (error) {
+      console.error(`[N8n Bridge] Failed to research ${technology}:`, error);
+      this.sessionTracker.trackFailure(
+        sessionId, 
+        technology, 
+        error as Error,
+        `researchTechnology failed for ${technology}`
+      );
+      
+      // Return minimal data on error
+      return {
+        query: technology,
+        timestamp: Date.now(),
+        totalResults: 0,
+        topResults: [],
+        insights: ['Research failed - external services may be unavailable'],
+        recommendations: [`Consider manual research for ${technology}`]
+      };
     }
-    
-    // Process Reddit results
-    if (redditResults.status === 'fulfilled') {
-      results.push(...redditResults.value.slice(0, this.config.maxResultsPerSource));
-    } else {
-      console.error('[N8n Bridge] Reddit search failed:', redditResults.reason);
-    }
-    
-    // Sort by relevance score
-    results.sort((a, b) => b.score - a.score);
-    
-    return {
-      query: technology,
-      timestamp: Date.now(),
-      totalResults: results.length,
-      topResults: results.slice(0, 20),
-      insights: this.extractInsights(results),
-      recommendations: this.generateRecommendations(results, technology)
-    };
   }
   
   /**
-   * Research multiple technologies with batching and concurrency control
+   * Research multiple technologies with concurrency control
    */
   async researchMultipleTechnologies(
     technologies: string[],
-    sessionId: string = 'default',
-    batchSize: number = 3
+    context: ProjectState
   ): Promise<Map<string, ResearchSummary>> {
-    console.log(`[N8n Bridge] Researching ${technologies.length} technologies`);
-    
+    const sessionId = context.sessionId || 'default';
     const results = new Map<string, ResearchSummary>();
     
-    // Batch research with concurrency limit
-    for (let i = 0; i < technologies.length; i += batchSize) {
-      const batch = technologies.slice(i, i + batchSize);
-      const batchResults = await Promise.allSettled(
-        batch.map(tech => this.researchTechnology(tech, sessionId))
+    console.log(`[N8n Bridge] Researching ${technologies.length} technologies for session ${sessionId}`);
+    
+    // Process in batches to avoid overwhelming the API
+    for (let i = 0; i < technologies.length; i += this.config.maxConcurrentRequests) {
+      const batch = technologies.slice(i, i + this.config.maxConcurrentRequests);
+      
+      const batchResults = await Promise.all(
+        batch.map(tech => this.researchTechnology(tech, context))
       );
       
       batch.forEach((tech, index) => {
-        const result = batchResults[index];
-        if (result.status === 'fulfilled') {
-          results.set(tech, result.value);
-        } else {
-          console.error(`[N8n Bridge] Failed to research ${tech}:`, result.reason);
-          results.set(tech, this.createEmptyResearchSummary(tech));
-        }
+        results.set(tech, batchResults[index]);
       });
       
-      // Add a small delay between batches to avoid overwhelming the API
-      if (i + batchSize < technologies.length) {
-        await this.delay(1000);
+      // Add delay between batches to avoid rate limiting
+      if (i + this.config.maxConcurrentRequests < technologies.length) {
+        console.log(`[N8n Bridge] Delaying ${this.config.batchDelay}ms before next batch`);
+        await new Promise(resolve => setTimeout(resolve, this.config.batchDelay));
       }
     }
     
@@ -114,24 +158,23 @@ export class N8nBridge {
   }
   
   /**
-   * Integration method for LangGraph nodes
+   * Research from state - convenience method for LangGraph nodes
    */
-  async researchFromState(context: ProjectState): Promise<Map<string, ResearchSummary>> {
-    const technologies = context.extractedTechnologies || [];
-    const additionalTopics = context.researchTopics || [];
+  async researchFromState(state: ProjectState): Promise<Map<string, ResearchSummary>> {
+    const sessionId = state.sessionId || 'default';
     
-    // Combine technologies and additional topics
-    const allTopics = [...new Set([...technologies, ...additionalTopics])];
+    // Track overall research operation
+    this.sessionTracker.trackRequest(sessionId, 'research_from_state');
     
-    if (allTopics.length === 0) {
-      console.log('[N8n Bridge] No technologies to research');
+    // Extract technologies from state
+    const technologies = state.extractedTechnologies || [];
+    
+    if (technologies.length === 0) {
+      console.log('[N8n Bridge] No technologies found in state to research');
       return new Map();
     }
     
-    // Use file path as session identifier for consistency
-    const sessionId = this.generateSessionId(context.filePath);
-    
-    return this.researchMultipleTechnologies(allTopics, sessionId);
+    return this.researchMultipleTechnologies(technologies, state);
   }
   
   /**
@@ -141,21 +184,24 @@ export class N8nBridge {
     query: string,
     sessionId: string
   ): Promise<ResearchResult[]> {
+    const startTime = Date.now();
+    
     try {
-      const results = await this.client.searchHackerNewsTransformed(
-        query,
-        sessionId,
-        {
-          limit: 30,
-          sortBy: 'relevance',
-          dateRange: 'last_year'
-        }
-      );
+      const response = await this.client.searchHackerNewsTransformed(query, sessionId, {
+        limit: 30,
+        sortBy: 'relevance',
+        dateRange: 'last_year'
+      });
       
-      return results;
+      // Track individual API call success
+      const responseTime = Date.now() - startTime;
+      this.sessionTracker.trackRequest(sessionId, `hackernews:${query}`, responseTime);
+      
+      return response;
     } catch (error) {
       console.error('[N8n Bridge] HN search error:', error);
-      return [];
+      // Re-throw the error to be handled by Promise.allSettled
+      throw error;
     }
   }
   
@@ -166,22 +212,25 @@ export class N8nBridge {
     query: string,
     sessionId: string
   ): Promise<ResearchResult[]> {
+    const startTime = Date.now();
+    
     try {
-      const results = await this.client.searchRedditTransformed(
-        query,
-        sessionId,
-        {
-          limit: 30,
-          sortBy: 'relevance',
-          timeframe: 'year',
-          subreddits: this.getTechSubreddits(query)
-        }
-      );
+      const response = await this.client.searchRedditTransformed(query, sessionId, {
+        limit: 30,
+        sortBy: 'relevance',
+        timeframe: 'year',
+        subreddits: this.getTechSubreddits(query)
+      });
       
-      return results;
+      // Track individual API call success
+      const responseTime = Date.now() - startTime;
+      this.sessionTracker.trackRequest(sessionId, `reddit:${query}`, responseTime);
+      
+      return response;
     } catch (error) {
       console.error('[N8n Bridge] Reddit search error:', error);
-      return [];
+      // Re-throw the error to be handled by Promise.allSettled
+      throw error;
     }
   }
   
@@ -254,6 +303,18 @@ export class N8nBridge {
     
     // Remove duplicates and limit to 10
     return [...new Set(baseSubreddits)].slice(0, 10);
+  }
+  
+  /**
+   * Select top results from combined sources
+   */
+  private selectTopResults(results: ResearchResult[]): ResearchResult[] {
+    // Sort by relevance score descending
+    const sorted = results.sort((a, b) => b.score - a.score);
+    
+    // Take top results up to configured limit
+    const limit = this.config.maxResultsPerSource * 2; // Double since we have 2 sources
+    return sorted.slice(0, limit);
   }
   
   /**
@@ -413,41 +474,6 @@ export class N8nBridge {
   }
   
   /**
-   * Create an empty research summary for failed searches
-   */
-  private createEmptyResearchSummary(query: string): ResearchSummary {
-    return {
-      query,
-      timestamp: Date.now(),
-      totalResults: 0,
-      topResults: [],
-      insights: ['No research data available'],
-      recommendations: ['Try searching manually for more information']
-    };
-  }
-  
-  /**
-   * Generate a session ID from file path
-   */
-  private generateSessionId(filePath: string): string {
-    // Simple hash of file path for session tracking
-    let hash = 0;
-    for (let i = 0; i < filePath.length; i++) {
-      const char = filePath.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return `session-${Math.abs(hash).toString(16)}`;
-  }
-  
-  /**
-   * Utility delay function
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-  
-  /**
    * Get the n8n client instance
    */
   getClient(): N8nClient {
@@ -459,5 +485,33 @@ export class N8nBridge {
    */
   getTransformer(): ResponseTransformer {
     return this.transformer;
+  }
+  
+  /**
+   * Get session metrics for debugging and analytics
+   */
+  getSessionMetrics(sessionId: string) {
+    return this.sessionTracker.getSessionMetrics(sessionId);
+  }
+  
+  /**
+   * Get aggregate statistics across all sessions
+   */
+  getStats() {
+    return this.sessionTracker.getStats();
+  }
+  
+  /**
+   * Export session data for debugging
+   */
+  exportSessionData(sessionId?: string): string {
+    return this.sessionTracker.exportSessionData(sessionId);
+  }
+  
+  /**
+   * Clean up resources (stop timers, etc.)
+   */
+  cleanup(): void {
+    this.sessionTracker.stopCleanupTimer();
   }
 } 

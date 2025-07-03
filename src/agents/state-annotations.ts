@@ -16,6 +16,12 @@ export const stateChannels = {
     default: () => ''
   },
   
+  // Session tracking
+  sessionId: {
+    value: (x: string | undefined, y?: string | undefined) => y ?? x,
+    default: () => undefined as string | undefined
+  },
+  
   // Array channels that append values
   requirements: {
     value: (x: Requirement[], y?: Requirement[]) => y ?? x,
