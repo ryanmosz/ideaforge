@@ -7,6 +7,7 @@ import { ProgressManager } from './progress-manager';
 import { CommandContext } from './types';
 import { BaseCommand } from './commands/base-command';
 import { AnalyzeCommand } from './commands/analyze';
+import { ExportCommand } from './commands/export';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -74,6 +75,7 @@ if (hasCommand && !hasHelpFlag) {
 // Register commands
 const commands: BaseCommand[] = [
   new AnalyzeCommand(context),
+  new ExportCommand(context),
   // TODO: Add other commands here
 ];
 
@@ -92,13 +94,6 @@ program
   .description('Refine your analysis with feedback')
   .action(() => {
     console.log(chalk.blue('Coming soon:'), 'Refinement functionality');
-  });
-
-program
-  .command('export')
-  .description('Export analysis to different formats')
-  .action(() => {
-    console.log(chalk.blue('Coming soon:'), 'Export functionality');
   });
 
 program
