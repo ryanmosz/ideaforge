@@ -12,7 +12,7 @@ export class MoscowCategorizationNode {
   
   constructor() {
     this.llm = new ChatOpenAI({
-      modelName: 'gpt-4-turbo-preview',
+      modelName: 'o3-mini',
       temperature: 0.1, // Lower temperature for more consistent categorization
       maxTokens: 2000
     });

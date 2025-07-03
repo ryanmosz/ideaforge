@@ -12,7 +12,7 @@ export class RequirementsAnalysisNode {
   
   constructor() {
     this.llm = new ChatOpenAI({
-      modelName: 'gpt-4-turbo-preview',
+      modelName: 'o3-mini',
       temperature: 0.2,
       maxTokens: 2000
     });

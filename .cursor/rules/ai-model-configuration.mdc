@@ -1,0 +1,42 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+Description: Use o3-mini for all AI model interactions in the IdeaForge project
+Globs: src/agents/nodes/**/*.ts, src/services/**/*.ts
+
+# AI Model Configuration Rule
+
+For all AI/LLM interactions in the IdeaForge project, use the `o3-mini` model instead of GPT-4 or other models.
+
+## Configuration Pattern
+
+When creating ChatOpenAI instances:
+
+```typescript
+this.llm = new ChatOpenAI({
+  modelName: 'o3-mini',  // Always use o3-mini
+  temperature: 0.1-0.2,  // Adjust based on task needs
+  maxTokens: 2000        // Adjust based on expected output
+});
+```
+
+## Rationale
+
+- o3-mini provides excellent performance for the project's needs
+- More cost-effective than larger models
+- Sufficient capability for requirements analysis, categorization, and evaluation tasks
+
+## Examples
+
+✅ Correct:
+```typescript
+new ChatOpenAI({ modelName: 'o3-mini' })
+```
+
+❌ Incorrect:
+```typescript
+new ChatOpenAI({ modelName: 'gpt-4' })
+new ChatOpenAI({ modelName: 'gpt-4-turbo-preview' })
+```
