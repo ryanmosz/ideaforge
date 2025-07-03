@@ -111,13 +111,27 @@ export class AnalyzeCommand extends BaseCommand {
           rawText: `As a ${story.actor}, I want to ${story.action}, so that ${story.benefit}`
         })),
         // Transform requirements to match expected format
-        requirements: result.requirements.map((req: any) => ({
-          id: req.id,
-          text: req.title || req.description, // Use title as text
-          description: req.description,
-          moscowType: { type: 'MUST' }, // Default for now
-          category: 'functional' as const // Default for now
-        })),
+        requirements: result.requirements.map((req: any) => {
+          // Find which MoSCoW category this requirement is in
+          let moscowType = 'MUST'; // Default
+          if (result.moscowAnalysis) {
+            if (result.moscowAnalysis.should.some((r: any) => r.id === req.id)) {
+              moscowType = 'SHOULD';
+            } else if (result.moscowAnalysis.could.some((r: any) => r.id === req.id)) {
+              moscowType = 'COULD';
+            } else if (result.moscowAnalysis.wont.some((r: any) => r.id === req.id)) {
+              moscowType = 'WONT';
+            }
+          }
+          
+          return {
+            id: req.id,
+            text: req.title || req.description, // Use title as text
+            description: req.description,
+            moscowType: { type: moscowType }, // Set proper MoSCoW type
+            category: 'functional' as const // Default for now
+          };
+        }),
         // Transform brainstorm ideas to match expected format
         brainstormIdeas: result.brainstormIdeas.map((idea: any) => ({
           category: idea.category || 'General',

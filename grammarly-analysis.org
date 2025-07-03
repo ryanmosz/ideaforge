@@ -1,6 +1,0 @@
-#+TITLE: IdeaForge Analysis
-#+AUTHOR: IdeaForge AI
-#+DATE: 2025-07-03T23:03:09.863Z
-
-* Project Overview
-[Project description needed]

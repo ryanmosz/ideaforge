@@ -189,6 +189,78 @@ export class FileHandler {
     lines.push('');
     sectionCount++;
     
+    // Add MoSCoW Analysis section if present
+    if ((data as any).moscowAnalysis) {
+      const moscow = (data as any).moscowAnalysis;
+      lines.push('* MoSCoW Analysis');
+      
+      if (moscow.must?.length > 0) {
+        lines.push('** Must Have');
+        moscow.must.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      if (moscow.should?.length > 0) {
+        lines.push('** Should Have');
+        moscow.should.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      if (moscow.could?.length > 0) {
+        lines.push('** Could Have');
+        moscow.could.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      if (moscow.wont?.length > 0) {
+        lines.push('** Won\'t Have');
+        moscow.wont.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      sectionCount++;
+    }
+    
+    // Add Kano Analysis section if present
+    if ((data as any).kanoAnalysis) {
+      const kano = (data as any).kanoAnalysis;
+      lines.push('* Kano Analysis');
+      
+      if (kano.basic?.length > 0) {
+        lines.push('** Basic (Expected) Features');
+        kano.basic.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      if (kano.performance?.length > 0) {
+        lines.push('** Performance Features');
+        kano.performance.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      if (kano.excitement?.length > 0) {
+        lines.push('** Excitement (Delighter) Features');
+        kano.excitement.forEach((item: any) => {
+          lines.push(`   - ${item.description || item.title}`);
+        });
+        lines.push('');
+      }
+      
+      sectionCount++;
+    }
+    
     // Add user stories
     if (data.userStories && data.userStories.length > 0) {
       lines.push('* User Stories');
@@ -213,8 +285,10 @@ export class FileHandler {
         lines.push('** Functional Requirements');
         functional.forEach(req => {
           const tags = `:${req.moscowType.type}:`;
-          lines.push(`*** ${req.text}${' '.repeat(Math.max(1, 70 - req.text.length))}${tags}`);
-          if (req.description) {
+          const reqText = req.description || req.text;
+          const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
+          lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
+          if (req.description && req.description !== reqText) {
             lines.push(`    ${req.description}`);
           }
           lines.push('');
@@ -225,8 +299,10 @@ export class FileHandler {
         lines.push('** Technical Requirements');
         technical.forEach(req => {
           const tags = `:${req.moscowType.type}:`;
-          lines.push(`*** ${req.text}${' '.repeat(Math.max(1, 70 - req.text.length))}${tags}`);
-          if (req.description) {
+          const reqText = req.description || req.text;
+          const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
+          lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
+          if (req.description && req.description !== reqText) {
             lines.push(`    ${req.description}`);
           }
           lines.push('');
