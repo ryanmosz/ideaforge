@@ -44,6 +44,8 @@ export interface ProjectState {
     url: string;
     summary: string;
     relevance: number;
+    selectionReason?: string;
+    relationshipToTopic?: string;
   }[];
   
   redditResults: {
@@ -52,6 +54,8 @@ export interface ProjectState {
     summary: string;
     subreddit: string;
     relevance: number;
+    selectionReason?: string;
+    relationshipToTopic?: string;
   }[];
   
   additionalResearchResults: {

@@ -2,4 +2,5 @@
 export { TechnologyExtractionNode } from './TechnologyExtractionNode';
 export { HackerNewsSearchNode } from './HackerNewsSearchNode';
 export { RedditSearchNode } from './RedditSearchNode';
-export { AdditionalResearchNode } from './AdditionalResearchNode'; 
+export { AdditionalResearchNode } from './AdditionalResearchNode';
+export { ResearchSynthesisNode } from './ResearchSynthesisNode'; 
