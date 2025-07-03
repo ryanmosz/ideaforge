@@ -85,9 +85,24 @@ export interface RedditSearchPayload {
   };
 }
 
-// Result types (placeholders for now)
+// HackerNews result types
+export interface HNHit {
+  objectID: string;
+  title?: string;
+  story_title?: string;
+  comment_text?: string;
+  story_text?: string;
+  url?: string;
+  author: string;
+  points?: number;
+  num_comments?: number;
+  created_at: string;
+  _tags?: string[];
+  _highlightResult?: any;
+}
+
 export interface HNSearchResults {
-  hits: any[];
+  hits: HNHit[];
   nbHits: number;
   page: number;
   nbPages: number;
@@ -96,9 +111,41 @@ export interface HNSearchResults {
   query: string;
 }
 
+// Reddit result types
+export interface RedditPost {
+  id: string;
+  title: string;
+  selftext?: string;
+  permalink: string;
+  author: string;
+  subreddit: string;
+  ups: number;
+  downs: number;
+  upvote_ratio?: number;
+  num_comments: number;
+  created_utc: number;
+  is_video?: boolean;
+  all_awardings?: any[];
+}
+
+export interface RedditComment {
+  id: string;
+  body: string;
+  permalink: string;
+  author: string;
+  subreddit: string;
+  ups: number;
+  downs: number;
+  created_utc: number;
+  parent_id: string;
+  link_id: string;
+  link_title?: string;
+  depth?: number;
+}
+
 export interface RedditSearchResults {
-  posts?: any[];
-  comments?: any[];
+  posts?: RedditPost[];
+  comments?: RedditComment[];
   query: string;
   subreddits: string[];
 } 

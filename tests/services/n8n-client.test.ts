@@ -497,4 +497,144 @@ describe('N8nClient', () => {
       });
     });
   });
+  
+  describe('response transformation', () => {
+    let client: N8nClient;
+    
+    beforeEach(() => {
+      client = new N8nClient();
+    });
+    
+    it('should transform HackerNews results', async () => {
+      const mockHNData = {
+        hits: [
+          {
+            objectID: '12345',
+            title: 'Test Article',
+            url: 'https://example.com',
+            author: 'testuser',
+            points: 100,
+            num_comments: 20,
+            created_at: new Date().toISOString(),
+            _tags: ['story']
+          }
+        ],
+        nbHits: 1,
+        page: 0,
+        nbPages: 1,
+        hitsPerPage: 20,
+        processingTimeMS: 50,
+        query: 'test'
+      };
+      
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: mockHNData,
+          metadata: { cached: false, requestDuration: 100 }
+        }
+      });
+      
+      const results = await client.searchHackerNewsTransformed('test', 'session-123');
+      
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        id: '12345',
+        source: 'hackernews',
+        title: 'Test Article',
+        url: 'https://example.com',
+        content: 'Test Article',
+        metadata: {
+          author: 'testuser',
+          points: 100,
+          numComments: 20,
+          type: 'story'
+        }
+      });
+      expect(results[0].score).toBeGreaterThan(0);
+    });
+    
+    it('should transform Reddit results', async () => {
+      const mockRedditData = {
+        posts: [
+          {
+            id: 'post123',
+            title: 'Test Post',
+            selftext: 'Test content',
+            permalink: '/r/test/post123/',
+            author: 'testuser',
+            subreddit: 'test',
+            ups: 50,
+            downs: 5,
+            upvote_ratio: 0.91,
+            num_comments: 10,
+            created_utc: Math.floor(Date.now() / 1000)
+          }
+        ],
+        query: 'test',
+        subreddits: ['test']
+      };
+      
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: mockRedditData,
+          metadata: { cached: false, requestDuration: 100 }
+        }
+      });
+      
+      const results = await client.searchRedditTransformed('test', 'session-123');
+      
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        id: 'post123',
+        source: 'reddit',
+        title: 'Test Post',
+        url: 'https://reddit.com/r/test/post123/',
+        content: 'Test content',
+        metadata: {
+          author: 'testuser',
+          subreddit: 'test',
+          upvotes: 50,
+          type: 'post'
+        }
+      });
+    });
+    
+    it('should handle error responses gracefully', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          status: 'error',
+          error: 'Search failed',
+          metadata: { cached: false, requestDuration: 0 }
+        }
+      });
+      
+      const results = await client.searchHackerNewsTransformed('test', 'session-123');
+      
+      expect(results).toEqual([]);
+    });
+    
+    it('should handle missing data gracefully', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: null,
+          metadata: { cached: false, requestDuration: 100 }
+        }
+      });
+      
+      const results = await client.searchRedditTransformed('test', 'session-123');
+      
+      expect(results).toEqual([]);
+    });
+    
+    it('should provide access to transformer', () => {
+      const transformer = client.getTransformer();
+      
+      expect(transformer).toBeDefined();
+      expect(transformer.transformHackerNewsResults).toBeDefined();
+      expect(transformer.transformRedditResults).toBeDefined();
+    });
+  });
 }); 

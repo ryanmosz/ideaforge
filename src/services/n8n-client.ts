@@ -10,6 +10,8 @@ import {
 } from '../types/n8n-types';
 import { getN8nConfig } from '../config/n8n-config';
 import { RetryHandler, RetryConfig } from '../utils/retry-handler';
+import { ResponseTransformer } from './response-transformer';
+import { ResearchResult } from '../agents/types/research-types';
 
 /**
  * Client for communicating with n8n webhooks
@@ -18,6 +20,7 @@ export class N8nClient {
   private client: AxiosInstance;
   private config: N8nConfig;
   private retryHandler: RetryHandler;
+  private transformer: ResponseTransformer;
   
   constructor(config?: Partial<N8nConfig>, retryConfig?: Partial<RetryConfig>) {
     // Merge provided config with environment config
@@ -41,6 +44,9 @@ export class N8nClient {
       maxRetries: this.config.retries,
       ...retryConfig
     });
+    
+    // Create response transformer
+    this.transformer = new ResponseTransformer();
     
     this.setupInterceptors();
   }
@@ -105,6 +111,13 @@ export class N8nClient {
    */
   getRetryHandler(): RetryHandler {
     return this.retryHandler;
+  }
+  
+  /**
+   * Get the response transformer for external use
+   */
+  getTransformer(): ResponseTransformer {
+    return this.transformer;
   }
   
   /**
@@ -192,6 +205,42 @@ export class N8nClient {
    */
   async checkHealth(): Promise<N8nResponse<HealthCheckResponse>> {
     return this.get<HealthCheckResponse>('/ideaforge/health');
+  }
+  
+  /**
+   * Search Hacker News and return transformed results
+   */
+  async searchHackerNewsTransformed(
+    query: string, 
+    sessionId: string,
+    options?: HNSearchOptions
+  ): Promise<ResearchResult[]> {
+    const response = await this.searchHackerNews(query, sessionId, options);
+    
+    if (response.status === 'error' || !response.data) {
+      console.error(`[N8n Client] HackerNews search failed: ${response.error}`);
+      return [];
+    }
+    
+    return this.transformer.transformHackerNewsResults(response.data);
+  }
+  
+  /**
+   * Search Reddit and return transformed results
+   */
+  async searchRedditTransformed(
+    query: string,
+    sessionId: string,
+    options?: RedditSearchOptions
+  ): Promise<ResearchResult[]> {
+    const response = await this.searchReddit(query, sessionId, options);
+    
+    if (response.status === 'error' || !response.data) {
+      console.error(`[N8n Client] Reddit search failed: ${response.error}`);
+      return [];
+    }
+    
+    return this.transformer.transformRedditResults(response.data);
   }
   
   // /**
