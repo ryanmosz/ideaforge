@@ -4,7 +4,34 @@
 
 **Date**: 2024-12-20
 **Branch**: feature/task-5.0-n8n-integration
-**Active Task**: Task 5.3 Complete - Ready for Task 5.4 (Reddit API integration)
+**Active Task**: Task 5.4 - Reddit API integration (Phase 2 Complete - Subreddit Validation & Comment Search)
+
+## Recent Activity
+
+### Task 5.4 Phase 2: Subreddit Validation & Comment Search (IN PROGRESS)
+Completed subtasks:
+- ✅ 5.4.1: Set up Reddit OAuth2 in n8n workflow (Phase 1)
+- ✅ 5.4.5: Create TypeScript types for Reddit data (Phase 1)
+- ✅ 5.4.2: Configure subreddit search logic (Phase 2)
+  - Added subreddit validation node
+  - NSFW and private subreddit filtering
+  - Subscriber-based sorting for relevance
+  - Fallback to default subreddits
+- ✅ 5.4.3: Implement post and comment parsing (Phase 2)
+  - Dual search capability (posts AND comments)
+  - Comment filtering by subreddit
+  - Low-effort comment removal
+  - Unified result format with type indicators
+
+Enhanced workflow features:
+- **Validate Subreddits Node**: Checks each subreddit's accessibility
+- **Search Posts & Comments Node**: Parallel searches with rate limit awareness
+- **Enhanced Transform Results**: Handles mixed post/comment results
+
+Created/Updated files:
+- `n8n-workflows/reddit-search.json` - Enhanced with validation and comment search
+- `scripts/test-reddit-phase2.js` - New comprehensive test suite for Phase 2
+- `tasks/complete/task-5.4-phase2-summary.md` - Phase 2 completion summary
 
 ## Recent Completions
 
@@ -109,16 +136,34 @@ Required steps before final testing:
    - Graceful fallbacks for all error scenarios
    - Proper error codes and messages
 
-## Next Task: 5.4 - Implement Reddit API integration
+## Current Task: 5.4 - Reddit API integration
 
-### Requirements for Task 5.4:
-1. Set up Reddit OAuth2 in n8n workflow
-2. Configure subreddit search logic
-3. Implement post and comment parsing
-4. Add content filtering (NSFW, deleted)
-5. Create TypeScript types for Reddit data
-6. Test OAuth token refresh
-7. Verify rate limit compliance
+### Phase 1 Complete (OAuth2 & Types):
+- ✅ 5.4.1: Set up Reddit OAuth2 in n8n workflow
+- ✅ 5.4.5: Create TypeScript types for Reddit data
+
+### Phase 2 Complete (Search Implementation):
+- ✅ 5.4.2: Configure subreddit search logic
+- ✅ 5.4.3: Implement post and comment parsing
+
+### Next Steps - Phase 3 (Content Quality):
+- [ ] 5.4.4: Add content filtering (NSFW, deleted)
+
+### Remaining Phase:
+- Phase 4: Reliability (5.4.6, 5.4.7)
+
+### Setup Instructions:
+1. Create Reddit app at https://www.reddit.com/prefs/apps
+2. Set environment variables:
+   ```bash
+   export REDDIT_CLIENT_ID="your_client_id"
+   export REDDIT_CLIENT_SECRET="your_client_secret"
+   export REDDIT_USER_AGENT="IdeaForge/1.0 (by /u/your_username)"
+   ```
+3. Verify OAuth setup: `node scripts/verify-reddit-oauth.js`
+4. Import workflow in n8n: `n8n-workflows/reddit-search.json`
+5. Test basic webhook: `node scripts/test-reddit-webhook.js`
+6. Test Phase 2 features: `node scripts/test-reddit-phase2.js`
 
 ## Environment Setup
 ```bash
@@ -147,6 +192,12 @@ npm test
 - **URGENT**: Old workflow still active in n8n - needs re-import
 
 ## Files to Review
+- `n8n-workflows/reddit-search.json` - UPDATED: Enhanced with subreddit validation and comment search
+- `src/types/reddit-types.ts` - Reddit API type definitions
+- `scripts/verify-reddit-oauth.js` - OAuth setup verification
+- `scripts/test-reddit-webhook.js` - Basic Reddit webhook test script
+- `scripts/test-reddit-phase2.js` - NEW: Phase 2 feature test suite
+- `tasks/complete/task-5.4-phase2-summary.md` - NEW: Phase 2 completion summary
 - `n8n-workflows/hackernews-search.json` - Updated workflow with enhanced scoring and error handling
 - `src/types/hn-specific-types.ts` - Comprehensive HN type definitions
 - `n8n-workflows/deploy.sh` - Deployment helper script

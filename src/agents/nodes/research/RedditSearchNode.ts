@@ -30,6 +30,7 @@ interface ProcessedResult {
   summary: string;
   subreddit: string;
   relevance: number;
+  type?: 'post' | 'comment';
   velocity?: number;
   isHot?: boolean;
   isTrending?: boolean;

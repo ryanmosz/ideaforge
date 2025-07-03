@@ -4,6 +4,7 @@
 - `tests/services/n8n-client.test.ts` - Unit tests for n8n client
 - `src/types/n8n-types.ts` - TypeScript interfaces for n8n communication
 - `src/types/hn-specific-types.ts` - HackerNews-specific type definitions
+- `src/types/reddit-types.ts` - Reddit API type definitions
 - `src/agents/types/research-types.ts` - Research result types for agents
 - `src/services/response-transformer.ts` - n8n response transformation service
 - `tests/services/response-transformer.test.ts` - Response transformer tests
@@ -19,6 +20,8 @@
 - `n8n-workflows/deploy.sh` - Workflow deployment helper script
 - `scripts/test-hn-webhook.js` - HN webhook test script
 - `scripts/verify-hn-response.js` - Workflow verification script
+- `scripts/test-reddit-webhook.js` - Reddit webhook test script
+- `scripts/verify-reddit-oauth.js` - Reddit OAuth verification script
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
 - `.env.example` - Environment variables template
 
@@ -60,11 +63,11 @@
   - [x] 5.3.7 Handle edge cases and errors
 
 - [ ] 5.4 Implement Reddit API integration
-  - [ ] 5.4.1 Set up Reddit OAuth2 in n8n
-  - [ ] 5.4.2 Configure subreddit search logic
-  - [ ] 5.4.3 Implement post and comment parsing
+  - [x] 5.4.1 Set up Reddit OAuth2 in n8n
+  - [x] 5.4.2 Configure subreddit search logic
+  - [x] 5.4.3 Implement post and comment parsing
   - [ ] 5.4.4 Add content filtering (NSFW, deleted)
-  - [ ] 5.4.5 Create TypeScript types for Reddit data
+  - [x] 5.4.5 Create TypeScript types for Reddit data
   - [ ] 5.4.6 Test OAuth token refresh
   - [ ] 5.4.7 Verify rate limit compliance
 

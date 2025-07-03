@@ -21,7 +21,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Get the request headers\nconst headers = $json.headers || {};\nconst body = $json.body;\n\n// Check API key authentication\nconst apiKey = headers['x-api-key'];\nconst validApiKey = 'local-dev-api-key-12345'; // In production, this would come from credentials\n\nif (!apiKey) {\n  throw new Error('Missing API key. Please provide X-API-Key header');\n}\n\nif (apiKey !== validApiKey) {\n  throw new Error('Invalid API key');\n}\n\n// Validate required fields\nif (!body.query) {\n  throw new Error('Missing required field: query');\n}\nif (!body.sessionId) {\n  throw new Error('Missing required field: sessionId');\n}\n\n// Sanitize query (max 200 chars)\nbody.query = body.query.trim().substring(0, 200);\n\n// Handle subreddits (optional field)\nif (body.subreddits && Array.isArray(body.subreddits)) {\n  body.subreddits = body.subreddits.slice(0, 10);\n} else if (!body.subreddits) {\n  body.subreddits = [\n    'programming',\n    'webdev',\n    'javascript',\n    'typescript',\n    'node',\n    'learnprogramming'\n  ];\n}\n\n// Add timestamp and metadata\nbody.processedAt = new Date().toISOString();\nbody.webhookType = 'reddit-search';\nbody.authenticated = true;\n\n// Return the validated data\nreturn body;"
+        "jsCode": "// Get the request headers\nconst headers = $json.headers || {};\nconst body = $json.body;\n\n// Check API key authentication\nconst apiKey = headers['x-api-key'];\nconst validApiKey = 'local-dev-api-key-12345'; // In production, this would come from credentials\n\nif (!apiKey) {\n  throw new Error('Missing API key. Please provide X-API-Key header');\n}\n\nif (apiKey !== validApiKey) {\n  throw new Error('Invalid API key');\n}\n\n// Validate required fields\nif (!body.query) {\n  throw new Error('Missing required field: query');\n}\nif (!body.sessionId) {\n  throw new Error('Missing required field: sessionId');\n}\n\n// Sanitize query (max 200 chars)\nbody.query = body.query.trim().substring(0, 200);\n\n// Handle subreddits (optional field)\nif (body.subreddits && Array.isArray(body.subreddits)) {\n  body.subreddits = body.subreddits.slice(0, 15); // Allow up to 15 subreddits\n} else if (!body.subreddits) {\n  // Default subreddits if none provided\n  body.subreddits = [\n    'programming',\n    'webdev',\n    'javascript',\n    'typescript',\n    'node',\n    'learnprogramming'\n  ];\n}\n\n// Handle search options\nbody.options = body.options || {};\nbody.options.sortBy = body.options.sortBy || 'relevance';\nbody.options.timeframe = body.options.timeframe || 'all';\nbody.options.limit = Math.min(body.options.limit || 25, 100);\nbody.options.includeComments = body.options.includeComments !== false;\nbody.options.includePosts = body.options.includePosts !== false;\n\n// Add timestamp and metadata\nbody.processedAt = new Date().toISOString();\nbody.webhookType = 'reddit-search';\nbody.authenticated = true;\nbody.requestId = `reddit-${body.sessionId}-${Date.now()}`;\n\n// Return the validated data\nreturn body;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -30,7 +30,109 @@
         0
       ],
       "id": "989b0762-219e-41b6-9ed8-3e364013a886",
-      "name": "Code"
+      "name": "Validate Request"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// OAuth2 Token Manager for Reddit API\n// Uses client credentials flow for app-only authentication\n\nconst tokenManager = $getWorkflowStaticData('redditTokenManager') || {\n  token: null,\n  expiresAt: null,\n  lastRefresh: null\n};\n\n// Reddit app credentials (should be in n8n credentials in production)\nconst clientId = process.env.REDDIT_CLIENT_ID || 'your_client_id_here';\nconst clientSecret = process.env.REDDIT_CLIENT_SECRET || 'your_client_secret_here';\nconst userAgent = process.env.REDDIT_USER_AGENT || 'IdeaForge/1.0 (by /u/your_username)';\n\nasync function getRedditToken() {\n  const now = Date.now();\n  \n  // Check if token is still valid (with 5 minute buffer)\n  if (tokenManager.token && tokenManager.expiresAt && now < (tokenManager.expiresAt - 300000)) {\n    console.log('Using existing Reddit token');\n    return tokenManager.token;\n  }\n  \n  console.log('Refreshing Reddit OAuth token');\n  \n  try {\n    // Create Basic auth header\n    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');\n    \n    // Request new token\n    const response = await $http.request({\n      method: 'POST',\n      url: 'https://www.reddit.com/api/v1/access_token',\n      headers: {\n        'Authorization': `Basic ${authString}`,\n        'Content-Type': 'application/x-www-form-urlencoded',\n        'User-Agent': userAgent\n      },\n      body: 'grant_type=client_credentials&scope=read',\n      timeout: 10000\n    });\n    \n    if (response.data.access_token) {\n      tokenManager.token = response.data.access_token;\n      tokenManager.expiresAt = now + (response.data.expires_in * 1000);\n      tokenManager.lastRefresh = now;\n      \n      // Save to workflow static data\n      $setWorkflowStaticData('redditTokenManager', tokenManager);\n      \n      console.log(`Reddit token refreshed, expires in ${response.data.expires_in} seconds`);\n      return tokenManager.token;\n    } else {\n      throw new Error('No access token in response');\n    }\n  } catch (error) {\n    console.error('Reddit OAuth error:', error.message);\n    throw new Error(`Failed to obtain Reddit access token: ${error.message}`);\n  }\n}\n\ntry {\n  const token = await getRedditToken();\n  \n  return [{\n    json: {\n      ...$json,\n      accessToken: token,\n      tokenExpiry: new Date(tokenManager.expiresAt).toISOString()\n    }\n  }];\n} catch (error) {\n  // Return error response\n  return [{\n    json: {\n      status: 'error',\n      error: error.message,\n      code: 'REDDIT_AUTH_ERROR',\n      timestamp: new Date().toISOString(),\n      sessionId: $json.sessionId\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "8a9b0762-219e-41b6-9ed8-3e364013a887",
+      "name": "OAuth2 Token Manager"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c5e5c8e5-8e6a-4b6d-8e5a-8e6a4b6d8e5a",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "f2e5c8e5-8e6a-4b6d-8e5a-8e6a4b6d8e5b",
+      "name": "Check Auth Status"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Select relevant subreddits based on query\nconst query = $json.query.toLowerCase();\nconst requestedSubreddits = $json.subreddits || [];\n\n// Technology-specific subreddit mappings\nconst techSubreddits = {\n  // Languages\n  javascript: ['javascript', 'node', 'learnjavascript', 'typescript'],\n  typescript: ['typescript', 'javascript', 'node'],\n  python: ['python', 'learnpython', 'django', 'flask'],\n  java: ['java', 'learnjava', 'javahelp'],\n  cpp: ['cpp', 'cpp_questions', 'cplusplus'],\n  csharp: ['csharp', 'dotnet', 'learncsharp'],\n  rust: ['rust', 'learnrust'],\n  go: ['golang'],\n  ruby: ['ruby', 'rails', 'learnruby'],\n  php: ['PHP', 'laravel'],\n  swift: ['swift', 'iOSProgramming'],\n  kotlin: ['Kotlin', 'androiddev'],\n  \n  // Frameworks/Libraries\n  react: ['reactjs', 'reactnative', 'learnreactjs'],\n  vue: ['vuejs'],\n  angular: ['angular'],\n  django: ['django', 'djangolearning'],\n  spring: ['springframework', 'java'],\n  express: ['node', 'expressjs'],\n  \n  // Topics\n  'machine learning': ['MachineLearning', 'learnmachinelearning', 'deeplearning'],\n  'data science': ['datascience', 'learnpython', 'dataengineering'],\n  blockchain: ['blockchain', 'ethereum', 'CryptoCurrency'],\n  gamedev: ['gamedev', 'unity3d', 'unrealengine', 'godot'],\n  mobile: ['androiddev', 'iOSProgramming', 'reactnative', 'FlutterDev'],\n  devops: ['devops', 'kubernetes', 'docker', 'aws', 'sysadmin'],\n  security: ['netsec', 'AskNetsec', 'cybersecurity'],\n  \n  // Databases\n  sql: ['SQL', 'Database', 'PostgreSQL', 'mysql'],\n  mongodb: ['mongodb', 'node'],\n  redis: ['redis']\n};\n\n// Base subreddits\nconst baseSubreddits = [\n  'programming',\n  'learnprogramming',\n  'AskProgramming',\n  'webdev'\n];\n\n// Collect relevant subreddits\nconst relevantSubs = new Set(baseSubreddits);\n\n// Add requested subreddits\nrequestedSubreddits.forEach(sub => relevantSubs.add(sub));\n\n// Check each tech keyword\nObject.entries(techSubreddits).forEach(([tech, subs]) => {\n  if (query.includes(tech)) {\n    subs.forEach(sub => relevantSubs.add(sub));\n  }\n});\n\n// Add career/job related if query contains certain keywords\nif (query.match(/job|career|interview|salary|hire|freelance/)) {\n  relevantSubs.add('cscareerquestions');\n  relevantSubs.add('ITCareerQuestions');\n}\n\n// Add learning subreddits if query is educational\nif (query.match(/learn|tutorial|beginner|start|how to/)) {\n  relevantSubs.add('learnprogramming');\n  relevantSubs.add('coding');\n}\n\n// Convert to array and limit\nconst selectedSubreddits = Array.from(relevantSubs).slice(0, 15);\n\nconsole.log(`Selected ${selectedSubreddits.length} subreddits for query: \"${$json.query}\"`);\n\nreturn [{\n  json: {\n    ...$json,\n    selectedSubreddits: selectedSubreddits,\n    subredditCount: selectedSubreddits.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        80
+      ],
+      "id": "4c9d0e8f-5a7b-4c8d-9e8f-5a7b4c8d9e8f",
+      "name": "Select Subreddits"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Validate subreddits exist and are accessible\nconst subreddits = $json.selectedSubreddits || [];\nconst token = $json.accessToken;\nconst userAgent = process.env.REDDIT_USER_AGENT || 'IdeaForge/1.0';\n\n// Validation results\nconst validSubreddits = [];\nconst invalidSubreddits = [];\nconst subredditMetadata = [];\n\nconsole.log(`Validating ${subreddits.length} subreddits...`);\n\n// Validate each subreddit\nfor (const sub of subreddits) {\n  try {\n    const response = await $http.request({\n      method: 'GET',\n      url: `https://oauth.reddit.com/r/${sub}/about.json`,\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'User-Agent': userAgent\n      },\n      timeout: 5000\n    });\n    \n    const data = response.data?.data;\n    \n    // Check if subreddit is accessible\n    if (data && data.subreddit_type === 'public' && !data.over_18) {\n      validSubreddits.push(sub);\n      subredditMetadata.push({\n        name: sub,\n        subscribers: data.subscribers || 0,\n        activeUsers: data.accounts_active || 0,\n        description: data.public_description || '',\n        created: data.created_utc\n      });\n    } else if (data && data.over_18) {\n      console.log(`Skipping NSFW subreddit: ${sub}`);\n      invalidSubreddits.push({ name: sub, reason: 'NSFW' });\n    } else if (data && data.subreddit_type !== 'public') {\n      console.log(`Skipping private subreddit: ${sub}`);\n      invalidSubreddits.push({ name: sub, reason: 'Private' });\n    }\n  } catch (error) {\n    console.log(`Subreddit validation failed for ${sub}:`, error.message);\n    invalidSubreddits.push({ name: sub, reason: error.message });\n  }\n}\n\n// Sort valid subreddits by subscriber count\nsubredditMetadata.sort((a, b) => b.subscribers - a.subscribers);\nconst sortedValidSubreddits = subredditMetadata.map(s => s.name);\n\nconsole.log(`Validated: ${validSubreddits.length} valid, ${invalidSubreddits.length} invalid`);\n\n// If no valid subreddits, use defaults\nif (sortedValidSubreddits.length === 0) {\n  console.log('No valid subreddits found, using defaults');\n  sortedValidSubreddits.push('programming', 'webdev', 'learnprogramming');\n}\n\nreturn [{\n  json: {\n    ...$json,\n    validSubreddits: sortedValidSubreddits,\n    invalidSubreddits: invalidSubreddits,\n    subredditMetadata: subredditMetadata,\n    validCount: sortedValidSubreddits.length,\n    invalidCount: invalidSubreddits.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        990,
+        80
+      ],
+      "id": "5d6e7f8a-9b0c-1d2e-3f4a-5b6c7d8e9f0a",
+      "name": "Validate Subreddits"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Search Reddit posts and comments using the API\nconst query = $json.query;\nconst subreddits = $json.validSubreddits || [];\nconst token = $json.accessToken;\nconst options = $json.options;\nconst userAgent = process.env.REDDIT_USER_AGENT || 'IdeaForge/1.0';\n\n// Results object\nconst results = {\n  posts: [],\n  comments: [],\n  rateLimit: null\n};\n\n// Search options\nconst searchOptions = {\n  limit: options.limit || 25,\n  sort: options.sortBy || 'relevance',\n  time: options.timeframe || 'all',\n  includeComments: options.includeComments !== false,\n  includePosts: options.includePosts !== false\n};\n\ntry {\n  // Search posts if enabled\n  if (searchOptions.includePosts) {\n    const postParams = new URLSearchParams({\n      q: query,\n      restrict_sr: 'on',\n      sort: searchOptions.sort,\n      t: searchOptions.time,\n      limit: searchOptions.limit,\n      raw_json: '1',\n      type: 'link'\n    });\n    \n    const subredditList = subreddits.join('+');\n    const postUrl = `https://oauth.reddit.com/r/${subredditList}/search.json?${postParams}`;\n    \n    console.log(`Searching posts in: r/${subredditList}`);\n    \n    const postResponse = await $http.request({\n      method: 'GET',\n      url: postUrl,\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'User-Agent': userAgent\n      },\n      timeout: 15000\n    });\n    \n    // Extract rate limit info\n    results.rateLimit = {\n      used: parseInt(postResponse.headers['x-ratelimit-used'] || '0'),\n      remaining: parseInt(postResponse.headers['x-ratelimit-remaining'] || '0'),\n      reset: parseInt(postResponse.headers['x-ratelimit-reset'] || '0')\n    };\n    \n    console.log(`Rate limit: ${results.rateLimit.remaining} remaining`);\n    \n    // Process post results\n    if (postResponse.data?.data?.children) {\n      results.posts = postResponse.data.data.children\n        .map(child => child.data)\n        .filter(post => !post.over_18 && !post.removed);\n    }\n  }\n  \n  // Search comments if enabled\n  if (searchOptions.includeComments && results.rateLimit && results.rateLimit.remaining > 0) {\n    const commentParams = new URLSearchParams({\n      q: query,\n      type: 'comment',\n      sort: searchOptions.sort,\n      t: searchOptions.time,\n      limit: Math.floor(searchOptions.limit / 2),\n      raw_json: '1'\n    });\n    \n    const commentUrl = `https://oauth.reddit.com/search.json?${commentParams}`;\n    \n    console.log('Searching comments...');\n    \n    const commentResponse = await $http.request({\n      method: 'GET',\n      url: commentUrl,\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'User-Agent': userAgent\n      },\n      timeout: 15000\n    });\n    \n    // Update rate limit\n    results.rateLimit = {\n      used: parseInt(commentResponse.headers['x-ratelimit-used'] || '0'),\n      remaining: parseInt(commentResponse.headers['x-ratelimit-remaining'] || '0'),\n      reset: parseInt(commentResponse.headers['x-ratelimit-reset'] || '0')\n    };\n    \n    // Process comment results - filter by subreddit\n    if (commentResponse.data?.data?.children) {\n      results.comments = commentResponse.data.data.children\n        .map(child => child.data)\n        .filter(comment => \n          subreddits.includes(comment.subreddit.toLowerCase()) &&\n          !comment.removed &&\n          comment.body !== '[deleted]' &&\n          comment.body !== '[removed]'\n        );\n    }\n  }\n  \n  console.log(`Found ${results.posts.length} posts and ${results.comments.length} comments`);\n  \n  return [{\n    json: {\n      ...$json,\n      posts: results.posts,\n      comments: results.comments,\n      postCount: results.posts.length,\n      commentCount: results.comments.length,\n      rateLimit: results.rateLimit,\n      searchTime: Date.now() - new Date($json.processedAt).getTime()\n    }\n  }];\n  \n} catch (error) {\n  console.error('Reddit search error:', error.message);\n  \n  // Check for specific error types\n  if (error.response?.status === 429) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Reddit API rate limit exceeded',\n        code: 'RATE_LIMIT_ERROR',\n        retryAfter: error.response.headers['retry-after'],\n        timestamp: new Date().toISOString(),\n        sessionId: $json.sessionId\n      }\n    }];\n  } else if (error.response?.status === 401) {\n    return [{\n      json: {\n        status: 'error',\n        error: 'Reddit authentication failed',\n        code: 'AUTH_ERROR',\n        timestamp: new Date().toISOString(),\n        sessionId: $json.sessionId\n      }\n    }];\n  } else {\n    return [{\n      json: {\n        status: 'error',\n        error: error.message,\n        code: 'SEARCH_ERROR',\n        timestamp: new Date().toISOString(),\n        sessionId: $json.sessionId\n      }\n    }];\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        80
+              ],
+        "id": "7b8c9d0e-5f6a-7b8c-9d0e-5f6a7b8c9d0e",
+        "name": "Search Posts & Comments"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Transform Reddit posts and comments to IdeaForge format\nconst posts = $json.posts || [];\nconst comments = $json.comments || [];\nconst query = $json.query;\n\nfunction calculateRelevance(item, searchQuery, type = 'post') {\n  let score = 0;\n  \n  if (type === 'post') {\n    // Base score from upvotes (0-40 scale)\n    score += Math.min(item.score / 50, 40);\n    \n    // Engagement score from comments (0-30 scale)\n    score += Math.min(item.num_comments / 20, 30);\n    \n    // Upvote ratio bonus (0-10 scale)\n    if (item.upvote_ratio) {\n      score += item.upvote_ratio * 10;\n    }\n  } else {\n    // Comment scoring\n    score += Math.min(item.score / 10, 40);\n    \n    // Depth penalty (deeper comments often less relevant)\n    score -= Math.min((item.depth || 0) * 5, 20);\n    \n    // Length bonus\n    score += Math.min(item.body.length / 50, 20);\n    \n    // Awards bonus\n    if (item.gilded > 0) {\n      score += item.gilded * 20;\n    }\n  }\n  \n  // Recency score (0-20 scale)\n  const ageInDays = (Date.now() / 1000 - item.created_utc) / (60 * 60 * 24);\n  if (ageInDays < 2) {\n    score += 20;\n  } else if (ageInDays < 7) {\n    score += 15;\n  } else if (ageInDays < 30) {\n    score += 10;\n  } else if (ageInDays < 90) {\n    score += 5;\n  }\n  \n  // Content relevance\n  const content = type === 'post' ? item.title : item.body;\n  const contentLower = content.toLowerCase();\n  const queryLower = searchQuery.toLowerCase();\n  const queryWords = queryLower.split(' ').filter(w => w.length > 2);\n  \n  let contentRelevance = 0;\n  for (const word of queryWords) {\n    if (contentLower.includes(word)) {\n      contentRelevance += 7;\n    }\n  }\n  score += Math.min(contentRelevance, 20);\n  \n  return Math.round(Math.min(score, 100));\n}\n\nfunction getRelativeTime(timestampSeconds) {\n  const ageHours = (Date.now() / 1000 - timestampSeconds) / 3600;\n  \n  if (ageHours < 1) {\n    return 'just now';\n  } else if (ageHours < 24) {\n    return `${Math.floor(ageHours)} hour${Math.floor(ageHours) > 1 ? 's' : ''} ago`;\n  } else {\n    const days = Math.floor(ageHours / 24);\n    if (days === 1) {\n      return 'yesterday';\n    } else if (days < 7) {\n      return `${days} days ago`;\n    } else if (days < 30) {\n      const weeks = Math.floor(days / 7);\n      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;\n    } else {\n      const months = Math.floor(days / 30);\n      return `${months} month${months > 1 ? 's' : ''} ago`;\n    }\n  }\n}\n\n// Transform posts\nconst transformedPosts = posts\n  .filter(post => {\n    // Basic filtering\n    return !post.over_18 && \n           !post.removed && \n           !post.locked && \n           post.score >= 0 &&\n           post.selftext !== '[removed]' &&\n           post.selftext !== '[deleted]';\n  })\n  .map(post => {\n    const relevance = calculateRelevance(post, query, 'post');\n    const age = getRelativeTime(post.created_utc);\n    \n    // Build summary\n    let summary = `📄 POST • r/${post.subreddit} • ${age} • ${post.score} upvotes • ${post.num_comments} comments`;\n    \n    if (post.selftext && post.selftext.length > 0) {\n      const preview = post.selftext.substring(0, 150).replace(/\\n/g, ' ').trim();\n      summary += `\\n${preview}${post.selftext.length > 150 ? '...' : ''}`;\n    }\n    \n    return {\n      type: 'post',\n      title: post.title,\n      url: `https://reddit.com${post.permalink}`,\n      summary: summary,\n      subreddit: post.subreddit,\n      relevance: relevance\n    };\n  });\n\n// Transform comments\nconst transformedComments = comments\n  .filter(comment => {\n    // Filter low-effort comments\n    const lowEffortPatterns = [\n      /^(this|yes|no|lol|lmao|same|agreed|disagree)\\.?$/i,\n      /^\\^+$/,\n      /^[!?.]+$/\n    ];\n    \n    return comment.body.length >= 20 &&\n           !lowEffortPatterns.some(pattern => pattern.test(comment.body.trim()));\n  })\n  .map(comment => {\n    const relevance = calculateRelevance(comment, query, 'comment');\n    const age = getRelativeTime(comment.created_utc);\n    \n    // Truncate comment body for title\n    const titleText = comment.body.substring(0, 100).replace(/\\n/g, ' ').trim();\n    const title = titleText + (comment.body.length > 100 ? '...' : '');\n    \n    // Build summary\n    let summary = `💬 COMMENT • r/${comment.subreddit} • ${age} • ${comment.score} upvotes`;\n    if (comment.gilded > 0) {\n      summary += ` • ${comment.gilded}x Gold`;\n    }\n    summary += `\\nOn: \"${comment.link_title || 'Unknown post'}\"`;\n    summary += `\\n${comment.body.substring(0, 200).replace(/\\n/g, ' ').trim()}${comment.body.length > 200 ? '...' : ''}`;\n    \n    return {\n      type: 'comment',\n      title: title,\n      url: `https://reddit.com${comment.permalink}`,\n      summary: summary,\n      subreddit: comment.subreddit,\n      relevance: relevance\n    };\n  });\n\n// Combine and sort all results\nconst allResults = [...transformedPosts, ...transformedComments]\n  .sort((a, b) => b.relevance - a.relevance)\n  .slice(0, $json.options.limit);\n\n// Separate back into posts and comments for the response\nconst finalPosts = allResults.filter(r => r.type === 'post');\nconst finalComments = allResults.filter(r => r.type === 'comment');\n\n// Prepare response\nconst response = {\n  status: 'success',\n  data: {\n    posts: allResults, // All results mixed\n    metadata: {\n      subreddits: $json.validSubreddits || $json.selectedSubreddits,\n      totalResults: allResults.length,\n      postCount: finalPosts.length,\n      commentCount: finalComments.length,\n      filtered: (posts.length - transformedPosts.length) + (comments.length - transformedComments.length),\n      searchTime: $json.searchTime || (Date.now() - new Date($json.processedAt).getTime()),\n      invalidSubreddits: $json.invalidSubreddits || []\n    }\n  },\n  metadata: {\n    cached: false,\n    requestDuration: Date.now() - new Date($json.processedAt).getTime(),\n    timestamp: new Date().toISOString(),\n    sessionId: $json.sessionId,\n    rateLimitUsed: $json.rateLimit?.used,\n    rateLimitRemaining: $json.rateLimit?.remaining,\n    rateLimitReset: $json.rateLimit?.reset\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        80
+      ],
+      "id": "9d0e1f2a-3b4c-5d6e-7f8a-9b0c1d2e3f4a",
+      "name": "Transform Results"
     },
     {
       "parameters": {
@@ -53,6 +155,10 @@
               {
                 "name": "Access-Control-Max-Age",
                 "value": "86400"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
               }
             ]
           }
@@ -61,11 +167,46 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        440,
-        0
+        1540,
+        160
       ],
       "id": "08249f92-4eae-4711-ba23-1b72e5907b3a",
-      "name": "Respond to Webhook"
+      "name": "Success Response"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 500,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-API-Key"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        880,
+        -80
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Error Response"
     }
   ],
   "pinData": {},
@@ -74,18 +215,91 @@
       "main": [
         [
           {
-            "node": "Code",
+            "node": "Validate Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code": {
+    "Validate Request": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "OAuth2 Token Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OAuth2 Token Manager": {
+      "main": [
+        [
+          {
+            "node": "Check Auth Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Auth Status": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Select Subreddits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Subreddits": {
+      "main": [
+        [
+          {
+            "node": "Validate Subreddits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Subreddits": {
+      "main": [
+        [
+          {
+            "node": "Search Posts & Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Posts & Comments": {
+      "main": [
+        [
+          {
+            "node": "Transform Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Results": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
             "type": "main",
             "index": 0
           }
@@ -97,7 +311,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1c0fdc37-8c53-4a37-b742-c2285e73da83",
+  "versionId": "2d1fdc37-8c53-4a37-b742-c2285e73da84",
   "meta": {
     "instanceId": "92a0fdacd999c0291780e000ee0e5831611937a38c77bda4c332c38b95ff4613"
   },
