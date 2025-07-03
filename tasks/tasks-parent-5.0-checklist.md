@@ -3,6 +3,7 @@
 - `src/services/n8n-client.ts` - Main n8n webhook client implementation
 - `tests/services/n8n-client.test.ts` - Unit tests for n8n client
 - `src/types/n8n-types.ts` - TypeScript interfaces for n8n communication
+- `src/types/hn-specific-types.ts` - HackerNews-specific type definitions
 - `src/agents/types/research-types.ts` - Research result types for agents
 - `src/services/response-transformer.ts` - n8n response transformation service
 - `tests/services/response-transformer.test.ts` - Response transformer tests
@@ -14,6 +15,10 @@
 - `tests/agents/bridges/n8n-bridge.test.ts` - Bridge unit tests
 - `n8n-workflows/hackernews-search.json` - n8n workflow for HN integration
 - `n8n-workflows/reddit-search.json` - n8n workflow for Reddit integration
+- `n8n-workflows/health-check.json` - n8n health check workflow
+- `n8n-workflows/deploy.sh` - Workflow deployment helper script
+- `scripts/test-hn-webhook.js` - HN webhook test script
+- `scripts/verify-hn-response.js` - Workflow verification script
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
 - `.env.example` - Environment variables template
 
@@ -45,14 +50,14 @@
   - [x] 5.2.7 Add error handling and fallbacks
   - [x] 5.2.8 Write comprehensive unit tests
 
-- [ ] 5.3 Implement Hacker News API integration
-  - [ ] 5.3.1 Add HN search nodes to n8n workflow
-  - [ ] 5.3.2 Configure Algolia API parameters
-  - [ ] 5.3.3 Implement response parsing
-  - [ ] 5.3.4 Add relevance scoring
-  - [ ] 5.3.5 Create TypeScript types for HN data
-  - [ ] 5.3.6 Test with various search queries
-  - [ ] 5.3.7 Handle edge cases and errors
+- [x] 5.3 Implement Hacker News API integration
+  - [x] 5.3.1 Add HN search nodes to n8n workflow
+  - [x] 5.3.2 Configure Algolia API parameters
+  - [x] 5.3.3 Implement response parsing
+  - [x] 5.3.4 Add relevance scoring
+  - [x] 5.3.5 Create TypeScript types for HN data
+  - [x] 5.3.6 Test with various search queries
+  - [x] 5.3.7 Handle edge cases and errors
 
 - [ ] 5.4 Implement Reddit API integration
   - [ ] 5.4.1 Set up Reddit OAuth2 in n8n
