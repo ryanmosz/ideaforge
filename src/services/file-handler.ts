@@ -21,6 +21,34 @@ export class FileHandler {
   }
   
   /**
+   * Wraps text to a maximum line length, preserving indentation
+   */
+  private wrapText(text: string, maxLength: number = 80, indent: string = ''): string[] {
+    if (!text || text.length <= maxLength) {
+      return [indent + text];
+    }
+    
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = indent;
+    
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 > maxLength && currentLine.length > indent.length) {
+        lines.push(currentLine.trim());
+        currentLine = indent + word;
+      } else {
+        currentLine += (currentLine.length > indent.length ? ' ' : '') + word;
+      }
+    }
+    
+    if (currentLine.length > indent.length) {
+      lines.push(currentLine.trim());
+    }
+    
+    return lines;
+  }
+  
+  /**
    * Reads an org-mode file from disk and parses it
    * @param filePath Path to the org file
    * @param options File reading options
@@ -185,7 +213,12 @@ export class FileHandler {
     
     // Add project overview
     lines.push('* Project Overview');
-    lines.push(data.projectOverview || '[Project description needed]');
+    if (data.projectOverview) {
+      const wrappedOverview = this.wrapText(data.projectOverview, 80, '');
+      lines.push(...wrappedOverview);
+    } else {
+      lines.push('[Project description needed]');
+    }
     lines.push('');
     sectionCount++;
     
@@ -197,7 +230,10 @@ export class FileHandler {
       if (moscow.must?.length > 0) {
         lines.push('** Must Have');
         moscow.must.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -205,7 +241,10 @@ export class FileHandler {
       if (moscow.should?.length > 0) {
         lines.push('** Should Have');
         moscow.should.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -213,7 +252,10 @@ export class FileHandler {
       if (moscow.could?.length > 0) {
         lines.push('** Could Have');
         moscow.could.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -221,7 +263,10 @@ export class FileHandler {
       if (moscow.wont?.length > 0) {
         lines.push('** Won\'t Have');
         moscow.wont.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -237,7 +282,10 @@ export class FileHandler {
       if (kano.basic?.length > 0) {
         lines.push('** Basic (Expected) Features');
         kano.basic.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -245,7 +293,10 @@ export class FileHandler {
       if (kano.performance?.length > 0) {
         lines.push('** Performance Features');
         kano.performance.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -253,7 +304,10 @@ export class FileHandler {
       if (kano.excitement?.length > 0) {
         lines.push('** Excitement (Delighter) Features');
         kano.excitement.forEach((item: any) => {
-          lines.push(`   - ${item.description || item.title}`);
+          const wrappedLines = this.wrapText(item.description || item.title, 77, '   - ');
+          wrappedLines.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       }
@@ -285,11 +339,24 @@ export class FileHandler {
         lines.push('** Functional Requirements');
         functional.forEach(req => {
           const tags = `:${req.moscowType.type}:`;
+          // Use description if available, otherwise fall back to text
           const reqText = req.description || req.text;
-          const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
-          lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
-          if (req.description && req.description !== reqText) {
-            lines.push(`    ${req.description}`);
+          
+          // For requirements, wrap the heading line if too long
+          if (reqText.length + tags.length + 5 > 80) {
+            // Long requirement - put tags on next line
+            lines.push(`*** ${reqText}`);
+            lines.push(`    ${' '.repeat(70)}${tags}`);
+          } else {
+            // Short requirement - tags on same line
+            const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
+            lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
+          }
+          
+          // Don't add description again if we already used it in the header
+          if (req.description && req.description !== reqText && req.text !== req.description) {
+            const wrappedDesc = this.wrapText(req.description, 76, '    ');
+            lines.push(...wrappedDesc);
           }
           lines.push('');
         });
@@ -299,11 +366,24 @@ export class FileHandler {
         lines.push('** Technical Requirements');
         technical.forEach(req => {
           const tags = `:${req.moscowType.type}:`;
+          // Use description if available, otherwise fall back to text
           const reqText = req.description || req.text;
-          const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
-          lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
-          if (req.description && req.description !== reqText) {
-            lines.push(`    ${req.description}`);
+          
+          // For requirements, wrap the heading line if too long
+          if (reqText.length + tags.length + 5 > 80) {
+            // Long requirement - put tags on next line
+            lines.push(`*** ${reqText}`);
+            lines.push(`    ${' '.repeat(70)}${tags}`);
+          } else {
+            // Short requirement - tags on same line
+            const spacing = reqText.length > 70 ? 1 : Math.max(1, 70 - reqText.length);
+            lines.push(`*** ${reqText}${' '.repeat(spacing)}${tags}`);
+          }
+          
+          // Don't add description again if we already used it in the header
+          if (req.description && req.description !== reqText && req.text !== req.description) {
+            const wrappedDesc = this.wrapText(req.description, 76, '    ');
+            lines.push(...wrappedDesc);
           }
           lines.push('');
         });
@@ -326,7 +406,12 @@ export class FileHandler {
       categories.forEach((ideas, category) => {
         lines.push(`** ${category}`);
         ideas.forEach(idea => {
-          lines.push(`   - ${idea.text}`);
+          // Use full description if available, otherwise fall back to text
+          const ideaText = (idea as any).description || idea.text;
+          const wrappedIdea = this.wrapText(ideaText, 77, '   - ');
+          wrappedIdea.forEach((line, idx) => {
+            lines.push(idx === 0 ? line : '     ' + line.trim());
+          });
         });
         lines.push('');
       });

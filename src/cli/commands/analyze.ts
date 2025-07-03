@@ -135,7 +135,7 @@ export class AnalyzeCommand extends BaseCommand {
         // Transform brainstorm ideas to match expected format
         brainstormIdeas: result.brainstormIdeas.map((idea: any) => ({
           category: idea.category || 'General',
-          text: idea.title || idea.description
+          text: idea.description || idea.title  // Use full description first
         })),
         questionsAnswers: result.questionsAnswers,
         
