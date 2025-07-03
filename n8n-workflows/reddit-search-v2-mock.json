@@ -1,0 +1,135 @@
+{
+  "name": "IdeaForge - Reddit Search V2 (Mock)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ideaforge/reddit-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d80ed734-4e8e-4e05-9c0a-b7a390170aa1",
+      "name": "Webhook",
+      "webhookId": "9cd4e13a-1fda-4fa5-b409-3743665fbe6e"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Get the request headers\nconst headers = $json.headers || {};\nconst body = $json.body;\n\n// Check API key authentication\nconst apiKey = headers['x-api-key'];\nconst validApiKey = 'local-dev-api-key-12345';\n\nif (!apiKey) {\n  throw new Error('Missing API key. Please provide X-API-Key header');\n}\n\nif (apiKey !== validApiKey) {\n  throw new Error('Invalid API key');\n}\n\n// Validate required fields\nif (!body.query) {\n  throw new Error('Missing required field: query');\n}\nif (!body.sessionId) {\n  throw new Error('Missing required field: sessionId');\n}\n\n// Sanitize query (max 200 chars)\nbody.query = body.query.trim().substring(0, 200);\n\n// Add timestamp and metadata\nbody.processedAt = new Date().toISOString();\nbody.webhookType = 'reddit-search';\nbody.authenticated = true;\nbody.requestId = `reddit-${body.sessionId}-${Date.now()}`;\n\n// Return the validated data\nreturn body;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "989b0762-219e-41b6-9ed8-3e364013a886",
+      "name": "Validate Request"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Mock Reddit Search Results for Demo\nconst query = $json.query.toLowerCase();\nconst timestamp = Date.now();\n\n// Generate mock results based on query\nconst mockPosts = [\n  {\n    type: 'post',\n    title: `Best practices for ${query} in production`,\n    url: 'https://reddit.com/r/programming/mock-post-1',\n    summary: `⭐ HIGH QUALITY • 📄 POST • r/programming • 2 hours ago • 342 upvotes • 89 comments\\nDetailed discussion about ${query} best practices, performance optimization, and common pitfalls to avoid in production environments...`,\n    subreddit: 'programming',\n    relevance: 95,\n    qualityScore: 1250\n  },\n  {\n    type: 'post',\n    title: `How I improved ${query} by 70% - A case study`,\n    url: 'https://reddit.com/r/webdev/mock-post-2',\n    summary: `✨ QUALITY • 📄 POST • r/webdev • 1 day ago • 156 upvotes • 42 comments\\nI recently optimized our ${query} implementation and achieved significant performance gains. Here's what I learned...\\n✅ Highly upvoted (94%)`,\n    subreddit: 'webdev',\n    relevance: 88,\n    qualityScore: 780\n  },\n  {\n    type: 'comment',\n    title: `The key to ${query} is understanding the fundamentals...`,\n    url: 'https://reddit.com/r/learnprogramming/mock-comment-1',\n    summary: `⭐ HIGH QUALITY • 💬 COMMENT • r/learnprogramming • 6 hours ago • 89 upvotes • 2x Gold\\nOn: \"Getting started with ${query}\"\\nThe key to mastering ${query} is understanding the fundamentals. Start with simple examples and gradually increase complexity...`,\n    subreddit: 'learnprogramming',\n    relevance: 82,\n    qualityScore: 650\n  },\n  {\n    type: 'post',\n    title: `${query} vs alternatives: A comprehensive comparison`,\n    url: 'https://reddit.com/r/javascript/mock-post-3',\n    summary: `📄 POST • r/javascript • 3 days ago • 98 upvotes • 35 comments\\nI've spent the last month evaluating different approaches to ${query}. Here's my detailed comparison with benchmarks and real-world examples...`,\n    subreddit: 'javascript',\n    relevance: 75,\n    qualityScore: 520\n  },\n  {\n    type: 'comment',\n    title: `Don't forget about error handling when implementing ${query}...`,\n    url: 'https://reddit.com/r/node/mock-comment-2',\n    summary: `✨ QUALITY • 💬 COMMENT • r/node • 12 hours ago • 45 upvotes\\nOn: \"Common ${query} mistakes\"\\nOne thing I see developers overlook is proper error handling. Make sure to handle edge cases and provide meaningful error messages...`,\n    subreddit: 'node',\n    relevance: 68,\n    qualityScore: 380\n  }\n];\n\n// Build response\nconst response = {\n  status: 'success',\n  data: {\n    posts: mockPosts,\n    metadata: {\n      subreddits: ['programming', 'webdev', 'javascript', 'learnprogramming', 'node'],\n      totalResults: mockPosts.length,\n      postCount: mockPosts.filter(p => p.type === 'post').length,\n      commentCount: mockPosts.filter(p => p.type === 'comment').length,\n      filtered: {\n        posts: 0,\n        comments: 0\n      },\n      searchTime: 127,\n      note: 'Mock data for demo purposes'\n    }\n  },\n  metadata: {\n    cached: false,\n    requestDuration: 150,\n    timestamp: new Date().toISOString(),\n    sessionId: $json.sessionId,\n    isMockData: true,\n    mockReason: 'Demo mode - OAuth disabled for testing'\n  }\n};\n\nreturn response;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "mock-reddit-results",
+      "name": "Generate Mock Results"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-API-Key"
+              },
+              {
+                "name": "Access-Control-Max-Age",
+                "value": "86400"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        0
+      ],
+      "id": "08249f92-4eae-4711-ba23-1b72e5907b3a",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Generate Mock Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Mock Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "v2-mock-demo",
+  "meta": {
+    "instanceId": "92a0fdacd999c0291780e000ee0e5831611937a38c77bda4c332c38b95ff4613"
+  },
+  "id": "JENK25t7XUf9AyiZ",
+  "tags": []
+} 

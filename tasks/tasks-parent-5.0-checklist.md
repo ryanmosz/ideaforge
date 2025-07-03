@@ -39,6 +39,8 @@
 - `scripts/n8n-cache-key-generator.js` - n8n function node for cache key generation
 - `scripts/test-cache-warming.js` - Cache warming demonstration script
 - `scripts/test-metrics.js` - Metrics collection demonstration script
+- `tests/integration/demo-research-flow.test.ts` - NEW: Minimal integration test for demo
+- `scripts/demo-ideaforge.js` - NEW: Demo helper script
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
 - `.env.example` - Environment variables template
 
@@ -99,11 +101,23 @@
   - [x] 5.5.8 Test under load conditions
 
 - [ ] 5.6 Integration testing and documentation
-  - [ ] 5.6.1 Create end-to-end integration tests (Details in: tasks-parent-5.6.1-detailed.md)
-  - [ ] 5.6.2 Test complete research flow (Details in: tasks-parent-5.6.1-detailed.md)
-  - [ ] 5.6.3 Verify error recovery scenarios (Details in: tasks-parent-5.6.1-detailed.md)
-  - [ ] 5.6.4 Update project README (Details in: tasks-parent-5.6.2-detailed.md)
-  - [ ] 5.6.5 Create n8n deployment guide (Details in: tasks-parent-5.6.2-detailed.md)
-  - [ ] 5.6.6 Document API configuration (Details in: tasks-parent-5.6.3-detailed.md)
-  - [ ] 5.6.7 Add usage examples (Details in: tasks-parent-5.6.4-detailed.md)
-  - [ ] 5.6.8 Create troubleshooting guide (Details in: tasks-parent-5.6.5-detailed.md) 
+  - [x] 5.6.1 Create end-to-end integration tests (Details in: tasks-parent-5.6.1-detailed.md)
+  - [ ] 5.6.2 Test complete research flow (Details in: tasks-parent-5.6.1-detailed.md) [BLOCKED - n8n workflows need update]
+  - [ ] 5.6.3 Verify error recovery scenarios (Details in: tasks-parent-5.6.1-detailed.md) [DEFERRED - POST-DEMO]
+  - [x] 5.6.4 Update project README (Details in: tasks-parent-5.6.2-detailed.md)
+  - [ ] 5.6.5 Create n8n deployment guide (Details in: tasks-parent-5.6.2-detailed.md) [DEFERRED - POST-DEMO]
+  - [ ] 5.6.6 Document API configuration (Details in: tasks-parent-5.6.3-detailed.md) [DEFERRED - POST-DEMO]
+  - [x] 5.6.7 Add usage examples (Details in: tasks-parent-5.6.4-detailed.md)
+  - [ ] 5.6.8 Create troubleshooting guide (Details in: tasks-parent-5.6.5-detailed.md) [DEFERRED - POST-DEMO]
+  
+  **STATUS**: Demo-ready! 🎉
+  - ✅ FIXED: Created V2 workflows without problematic rate limiting nodes
+  - ✅ HackerNews V2: Working with real API data
+  - ✅ Health Check V2: Ready for import
+  - ⏭️ Reddit: Skipped for demo (avoids OAuth complexity)
+  - Basic demo works: `npm run test:grammarly`
+  - Test after importing workflows: `./scripts/test-demo-ready.sh`
+  - Created all-in-one demo script: `./scripts/demo-all-in-one.sh OPENAI_KEY`
+  - OpenAI integration is local via LangGraph (not through n8n)
+  - Research features work with HackerNews only for demo
+  Remaining tasks deferred to post-demo completion. 

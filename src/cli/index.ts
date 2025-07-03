@@ -66,12 +66,13 @@ const hasHelpFlag = args.includes('--help') || args.includes('-h');
 // Only check config if we have a command AND not asking for help
 if (hasCommand && !hasHelpFlag) {
   // Check for required environment variables
-  const requiredEnvVars = ['OPENAI_API_KEY', 'N8N_WEBHOOK_URL'];
+  const requiredEnvVars = ['OPENAI_API_KEY'];
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
     console.error(chalk.red('Configuration error:'), `Missing required environment variable${missingVars.length > 1 ? 's' : ''}: ${missingVars.join(', ')}`);
-    console.error(chalk.yellow('Please copy .env.example to .env and fill in required values'));
+    console.error(chalk.yellow('Please copy env.example to .env and fill in required values'));
+    console.error(chalk.yellow('Or run: npm run setup'));
     process.exit(1);
   }
 }

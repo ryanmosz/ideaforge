@@ -24,24 +24,24 @@ describe('Environment Configuration Validation', () => {
 
   describe('Required Variables', () => {
     it('should throw error when OPENAI_API_KEY is missing', () => {
-      process.env.N8N_WEBHOOK_URL = 'https://test.webhook.url';
-      
+      delete process.env.OPENAI_API_KEY;
       const { loadConfig } = require('../../src/config');
-      
       expect(() => loadConfig()).toThrow('Missing required environment variable: OPENAI_API_KEY');
     });
 
-    it('should throw error when N8N_WEBHOOK_URL is missing', () => {
-      process.env.OPENAI_API_KEY = 'test-key-123';
+    it('should NOT throw error when N8N_WEBHOOK_URL is missing (it\'s optional)', () => {
+      delete process.env.N8N_WEBHOOK_URL;
+      process.env.OPENAI_API_KEY = 'test-key';
       
       const { loadConfig } = require('../../src/config');
-      
-      expect(() => loadConfig()).toThrow('Missing required environment variable: N8N_WEBHOOK_URL');
+      const config = loadConfig();
+      expect(config.n8nWebhookUrl).toBeUndefined();
+      expect(config.openaiApiKey).toBe('test-key');
     });
 
-    it('should throw error when both required variables are missing', () => {
+    it('should throw error when multiple required variables are missing', () => {
+      delete process.env.OPENAI_API_KEY;
       const { loadConfig } = require('../../src/config');
-      
       expect(() => loadConfig()).toThrow('Missing required environment variable');
     });
   });
@@ -106,9 +106,19 @@ describe('Environment Configuration Validation', () => {
       const config = loadConfig();
       
       expect(typeof config.openaiApiKey).toBe('string');
-      expect(typeof config.n8nWebhookUrl).toBe('string');
+      expect(typeof config.n8nWebhookUrl).toBe('string'); // When provided, should be string
       expect(typeof config.logLevel).toBe('string');
       expect(typeof config.nodeEnv).toBe('string');
+    });
+
+    it('should handle optional n8nWebhookUrl correctly', () => {
+      process.env.OPENAI_API_KEY = 'test-key';
+      // Don't set N8N_WEBHOOK_URL
+      
+      const { loadConfig } = require('../../src/config');
+      const config = loadConfig();
+      
+      expect(config.n8nWebhookUrl).toBeUndefined();
     });
 
     it('should have all expected properties', () => {
@@ -234,7 +244,7 @@ N8N_WEBHOOK_URL=https://env-file.webhook.url
         loadConfig();
       } catch (error: any) {
         expect(error.message).toMatch(/Missing required environment variable/);
-        expect(error.message).toMatch(/OPENAI_API_KEY|N8N_WEBHOOK_URL/);
+        expect(error.message).toMatch(/OPENAI_API_KEY/);
       }
     });
 

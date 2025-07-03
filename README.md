@@ -4,6 +4,66 @@
 
 IdeaForge is a command-line tool that helps developers and project managers thoroughly plan projects using the MoSCoW prioritization framework combined with Kano model insights. By investing 15-30 minutes in structured planning, you can save weeks of development time and avoid costly pivots.
 
+## 🎯 Quick Demo (5 minutes)
+
+Want to see IdeaForge in action? Follow these steps:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/ideaforge.git
+cd ideaforge
+
+# 2. Install dependencies
+npm install
+
+# 3. Run interactive setup
+npm run setup
+
+# 4. Run the demo!
+npm run test:grammarly
+```
+
+The demo analyzes an AI-powered writing assistant for marketing professionals, showcasing:
+- **MoSCoW prioritization** of features like tone transformation
+- **AI recommendations** for implementation
+- **Risk analysis** and technical suggestions
+
+📝 **Note**: You'll need an OpenAI API key. Get one at [platform.openai.com](https://platform.openai.com)
+
+### Try It Yourself!
+
+After running the demo, experiment with your own ideas:
+
+1. **Edit the example**: Modify `example-grammarly-clone.org` with your own features
+2. **Run analysis**: `ideaforge analyze example-grammarly-clone.org`
+3. **See the magic**: Watch as AI analyzes and prioritizes your ideas
+
+## 📦 Demo for Contributors
+
+If you're reviewing this project, here's the fastest way to see it in action:
+
+```bash
+# 1. Clone and setup (2 minutes)
+git clone [repository-url]
+cd ideaforge
+npm install
+npm run setup  # Interactive setup - just add your OpenAI key
+
+# 2. Run the marketing-focused demo
+npm run test:grammarly
+
+# 3. Explore the example
+cat example-grammarly-clone.org  # See the input
+cat grammarly-analysis.org       # See the AI output
+```
+
+The demo showcases an AI writing assistant for marketers with:
+- **Innovative features**: Tone transformation & persuasion enhancement
+- **Smart prioritization**: MoSCoW analysis of requirements
+- **Technical insights**: Implementation recommendations
+
+💡 **Try modifying** `example-grammarly-clone.org` with your own ideas and re-run!
+
 ## 🎯 Why IdeaForge?
 
 ### The Problem
@@ -34,11 +94,11 @@ Initial Ideas → AI Analysis → Your Feedback → Refined Plan → Final Expor
 ```
 Edit the output, add `:RESPONSE:` tags, and re-process for better results.
 
-### 3. **External Intelligence Gathering**
-Automatically pulls relevant discussions from:
-- Hacker News threads about your tech stack
-- Reddit communities discussing similar projects
-- Recent trends and best practices
+### 3. **External Intelligence Gathering** ⭐ NEW
+Automatically searches and analyzes relevant discussions from:
+- **Hacker News**: Technical insights and best practices from the developer community
+- **Reddit**: Real-world experiences and project feedback from programming subreddits
+- Enriches your project analysis with community wisdom and current trends
 
 ### 4. **Smart Export Options**
 - **Org-mode**: Full analysis with tables, changelog, and tags
@@ -92,7 +152,11 @@ ideaforge init
 
 3. **Analyze your project:**
 ```bash
+# Basic analysis
 ideaforge analyze my-project.org --output analysis-v1.org
+
+# With external research (recommended!) ⭐
+ideaforge analyze my-project.org --output analysis-v1.org --research
 ```
 
 4. **Refine the analysis:**
@@ -160,10 +224,26 @@ ideaforge export analysis-final.org --format cursor --output tasks.md
     Based on your requirements, Supabase offers better real-time
     capabilities than Firebase for notification features.
 
-* External Intelligence
-** Recent Discussions:
-   - HN: "Supabase vs Firebase in 2024" - key insight about auth flows
-   - Reddit r/webdev: Similar project launched with these features...
+* External Intelligence ⭐
+** Technology Insights from Research:
+*** React + TypeScript (1,247 discussions analyzed)
+    - Strong community preference for Vite over CRA in 2024
+    - Consider using Zustand for state management (lighter than Redux)
+    - Recent HN thread: "Why we migrated from Redux to Zustand" (342 points)
+    
+*** Authentication Patterns:
+    - Supabase Auth praised for simplicity in recent Reddit threads
+    - Common pitfall: Not implementing refresh token rotation
+    - Community tip: Use Row Level Security (RLS) from day one
+
+*** Performance Considerations:
+    - Bundle splitting crucial for dashboard components
+    - React.lazy() with Suspense recommended for analytics views
+    - Real user experience: "Cut our load time by 60% with proper splitting"
+
+** Risk Alerts:
+   - Firebase costs can escalate quickly with real-time features
+   - Consider self-hosted Supabase for better cost control at scale
 
 * Changelog
 ** v1: Initial analysis - Added AI suggestions for security features
@@ -217,6 +297,14 @@ Identifies potential technical and scope risks early
 
 ### Dependency Analysis
 Understands which features depend on others
+
+## 🧪 For Testers
+
+Setting up IdeaForge for testing? See our comprehensive **[Tester Setup Guide](TESTER-SETUP-GUIDE.md)** which includes:
+- Step-by-step Mac setup instructions
+- Docker configuration for research features  
+- Pre-configured n8n settings
+- Common troubleshooting solutions
 
 ## 🤝 Contributing
 

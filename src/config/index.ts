@@ -19,14 +19,15 @@ export const AI_MODELS: Record<AIModel, string> = {
 
 interface Config {
   openaiApiKey: string;
-  n8nWebhookUrl: string;
+  n8nWebhookUrl?: string; // Optional - only needed for research feature
   logLevel: string;
   nodeEnv: string;
   aiModel: AIModel;
 }
 
 export function loadConfig(): Config {
-  const required = ['OPENAI_API_KEY', 'N8N_WEBHOOK_URL'];
+  // Only OpenAI API key is truly required
+  const required = ['OPENAI_API_KEY'];
   
   for (const key of required) {
     if (!process.env[key]) {
@@ -42,7 +43,7 @@ export function loadConfig(): Config {
 
   return {
     openaiApiKey: process.env.OPENAI_API_KEY!,
-    n8nWebhookUrl: process.env.N8N_WEBHOOK_URL!,
+    n8nWebhookUrl: process.env.N8N_WEBHOOK_URL, // Optional
     logLevel: process.env.LOG_LEVEL || 'info',
     nodeEnv: process.env.NODE_ENV || 'development',
     aiModel

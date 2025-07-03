@@ -103,9 +103,26 @@ export class AnalyzeCommand extends BaseCommand {
           date: new Date().toISOString()
         },
         projectOverview: result.researchSynthesis || '',
-        userStories: result.userStories,
-        requirements: result.requirements,
-        brainstormIdeas: result.brainstormIdeas,
+        // Transform user stories to match expected format
+        userStories: result.userStories.map((story: any) => ({
+          role: story.actor, // Map actor -> role
+          action: story.action,
+          benefit: story.benefit,
+          rawText: `As a ${story.actor}, I want to ${story.action}, so that ${story.benefit}`
+        })),
+        // Transform requirements to match expected format
+        requirements: result.requirements.map((req: any) => ({
+          id: req.id,
+          text: req.title || req.description, // Use title as text
+          description: req.description,
+          moscowType: { type: 'MUST' }, // Default for now
+          category: 'functional' as const // Default for now
+        })),
+        // Transform brainstorm ideas to match expected format
+        brainstormIdeas: result.brainstormIdeas.map((idea: any) => ({
+          category: idea.category || 'General',
+          text: idea.title || idea.description
+        })),
         questionsAnswers: result.questionsAnswers,
         
         // Enhanced results from LangGraph
@@ -123,7 +140,8 @@ export class AnalyzeCommand extends BaseCommand {
         
         // Metadata for compatibility
         validationScore: 100,
-        parsingErrors: []
+        parsingErrors: [],
+        changelog: []
       } as any;
       
       await this.fileHandler.writeDocument(exportData, outputPath, 'orgmode');

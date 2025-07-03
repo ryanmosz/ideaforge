@@ -122,22 +122,21 @@ export class AgentRunner extends EventEmitter {
         }
         
         // Each update is a node name to state update mapping
-        for (const [nodeName, nodeUpdate] of Object.entries(update)) {
+        for (const [nodeName] of Object.entries(update)) {
           if (nodeName) {
             nodesExecuted.push(nodeName);
             this.emitProgress(nodeName, `Processing ${this.getNodeDisplayName(nodeName)}...`);
-            
-            // The final state will be the accumulated state from all nodes
-            if (nodeUpdate) {
-              finalState = nodeUpdate as ProjectState;
-            }
           }
         }
       }
       
-      if (!finalState) {
+      // Get the final accumulated state from the checkpoint
+      const finalCheckpoint = await checkpointer.get({ configurable: { thread_id: session.threadId } });
+      if (!finalCheckpoint || !finalCheckpoint.channel_values) {
         throw new Error('Analysis failed to produce final state');
       }
+      
+      finalState = finalCheckpoint.channel_values as unknown as ProjectState;
       
       // Save final state
       await this.sessionManager.saveState();
@@ -259,22 +258,21 @@ export class AgentRunner extends EventEmitter {
         }
         
         // Each update is a node name to state update mapping
-        for (const [nodeName, nodeUpdate] of Object.entries(update)) {
+        for (const [nodeName] of Object.entries(update)) {
           if (nodeName) {
             nodesExecuted.push(nodeName);
             this.emitProgress(nodeName, `Processing ${this.getNodeDisplayName(nodeName)}...`);
-            
-            // The final state will be the accumulated state from all nodes
-            if (nodeUpdate) {
-              finalState = nodeUpdate as ProjectState;
-            }
           }
         }
       }
       
-      if (!finalState) {
+      // Get the final accumulated state from the checkpoint
+      const finalCheckpoint = await checkpointer.get({ configurable: { thread_id: session.threadId } });
+      if (!finalCheckpoint || !finalCheckpoint.channel_values) {
         throw new Error('Refinement failed to produce final state');
       }
+      
+      finalState = finalCheckpoint.channel_values as unknown as ProjectState;
       
       // Save updated state
       await this.sessionManager.saveState();

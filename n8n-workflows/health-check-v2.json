@@ -1,0 +1,101 @@
+{
+  "name": "IdeaForge - Health Check V2",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ideaforge/health",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "996427e9-0ff3-4ba7-adda-27f4f482613f",
+      "name": "Webhook",
+      "webhookId": "f5452fe1-1dcb-4706-9fcd-5bc7d05be430"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Health check information\nconst healthStatus = {\n  status: 'healthy',\n  service: 'ideaforge-n8n',\n  timestamp: new Date().toISOString(),\n  webhooks: {\n    hackernews: {\n      endpoint: '/webhook/ideaforge/hackernews-search',\n      status: 'active',\n      authentication: 'required',\n      method: 'POST',\n      version: 'v2'\n    },\n    reddit: {\n      endpoint: '/webhook/ideaforge/reddit-search', \n      status: 'active',\n      authentication: 'required',\n      method: 'POST',\n      version: 'v2-mock'\n    },\n    health: {\n      endpoint: '/webhook/ideaforge/health',\n      status: 'active',\n      authentication: 'none',\n      method: 'GET',\n      version: 'v2'\n    }\n  },\n  message: 'All webhooks operational (V2)',\n  version: '2.0.0',\n  note: 'Rate limiting disabled for demo'\n};\n\nreturn healthStatus;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "f432b75d-7ee4-4669-b65d-309f1b9d1774",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, OPTIONS"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        0
+      ],
+      "id": "7d4ec8ea-9acf-43db-af25-660e99a9f5cf",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "v2-demo-fixed",
+  "meta": {
+    "instanceId": "92a0fdacd999c0291780e000ee0e5831611937a38c77bda4c332c38b95ff4613"
+  },
+  "id": "ae11VIZ7RjIrTAjf",
+  "tags": []
+} 

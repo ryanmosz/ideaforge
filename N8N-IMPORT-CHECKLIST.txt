@@ -1,0 +1,36 @@
+N8N WORKFLOW IMPORT CHECKLIST
+=============================
+
+□ Step 1: Open n8n UI at http://localhost:5678
+
+□ Step 2: Delete Old Workflows
+   □ Found and deleted old "IdeaForge" workflows
+   □ Found and deleted any "echo" or test workflows
+   
+□ Step 3: Import hackernews-search.json
+   □ Clicked "Add Workflow" → "Import from File"
+   □ Selected: n8n-workflows/hackernews-search.json
+   □ Workflow imported successfully
+   □ ACTIVATED the workflow (toggle is GREEN)
+   
+□ Step 4: Import reddit-search.json  
+   □ Clicked "Add Workflow" → "Import from File"
+   □ Selected: n8n-workflows/reddit-search.json
+   □ Workflow imported successfully
+   □ ACTIVATED the workflow (toggle is GREEN)
+   
+□ Step 5: Import health-check.json
+   □ Clicked "Add Workflow" → "Import from File"
+   □ Selected: n8n-workflows/health-check.json
+   □ Workflow imported successfully
+   □ ACTIVATED the workflow (toggle is GREEN)
+
+□ Step 6: Verify All Active
+   □ See 3 workflows with green dots
+   □ Names are:
+      - HackerNews Search Webhook
+      - Reddit Search Webhook
+      - IdeaForge Health Check
+
+WHEN COMPLETE: Run this command to verify:
+node scripts/fix-n8n-workflows.js 
