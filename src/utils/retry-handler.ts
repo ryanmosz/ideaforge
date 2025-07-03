@@ -1,3 +1,5 @@
+import { N8nErrorHandler } from '../services/n8n-error-handler';
+
 /**
  * Configuration for retry behavior
  */
@@ -7,6 +9,7 @@ export interface RetryConfig {
   maxDelay: number;
   backoffMultiplier: number;
   retryableErrors: string[];
+  enableJitter?: boolean;
 }
 
 /**
@@ -14,115 +17,89 @@ export interface RetryConfig {
  */
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
-  initialDelay: 1000,
-  maxDelay: 30000,
-  backoffMultiplier: 2,
-  retryableErrors: ['ECONNREFUSED', 'ETIMEDOUT', 'ECONNABORTED', '429', '500', '502', '503', '504']
+  initialDelay: 1000,      // 1 second
+  maxDelay: 30000,         // 30 seconds
+  backoffMultiplier: 2,    // Double delay each attempt
+  retryableErrors: ['ECONNREFUSED', 'ETIMEDOUT', 'ECONNABORTED', '429', '500', '502', '503', '504'],
+  enableJitter: true
 };
 
 /**
  * Handles retry logic with exponential backoff
  */
 export class RetryHandler {
+  private errorHandler: N8nErrorHandler;
   private config: RetryConfig;
   
   constructor(config?: Partial<RetryConfig>) {
     this.config = { ...DEFAULT_RETRY_CONFIG, ...config };
+    this.errorHandler = new N8nErrorHandler();
   }
   
   /**
    * Execute an operation with retry logic
    * @param operation The async operation to execute
-   * @param context Description of the operation for logging
+   * @param context A description of the operation for logging
    * @returns The result of the operation
    */
   async execute<T>(
     operation: () => Promise<T>,
     context: string
   ): Promise<T> {
-    let lastError: Error | undefined;
+    let lastError: Error;
     
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
-        // Log retry attempt if not the first attempt
-        if (attempt > 0) {
-          console.log(`[Retry] ${context} - Attempt ${attempt + 1}/${this.config.maxRetries + 1}`);
-        }
-        
         return await operation();
       } catch (error) {
         lastError = error as Error;
         
-        // Check if we should retry
         if (!this.shouldRetry(error, attempt)) {
+          this.errorHandler.logError(lastError, context);
           throw error;
         }
         
-        // Calculate delay with jitter
-        const delay = this.calculateDelay(attempt);
-        console.log(`[Retry] ${context} - Failed with error: ${lastError.message}. Retrying in ${delay}ms...`);
+        const delay = this.calculateDelay(attempt, error);
+        console.log(`[Retry] ${context} - Attempt ${attempt + 1}/${this.config.maxRetries + 1} failed. Retrying in ${delay}ms...`);
         
-        // Wait before retrying
         await this.sleep(delay);
       }
     }
     
-    // All retries exhausted
-    throw new Error(`Operation failed after ${this.config.maxRetries + 1} attempts: ${lastError?.message || 'Unknown error'}`);
+    this.errorHandler.logError(lastError!, context);
+    throw new Error(`Operation failed after ${this.config.maxRetries + 1} attempts: ${lastError!.message}`);
   }
   
   /**
-   * Determine if an error is retryable
+   * Determine if an error should trigger a retry
    */
   private shouldRetry(error: any, attempt: number): boolean {
-    // Don't retry if we've exhausted attempts
     if (attempt >= this.config.maxRetries) {
       return false;
     }
     
-    // Check for specific error codes
-    const errorCode = error.code || error.response?.status?.toString();
-    if (errorCode && this.config.retryableErrors.includes(errorCode)) {
-      return true;
-    }
-    
-    // Check for axios timeout errors
-    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      return true;
-    }
-    
-    // Check for rate limiting
-    if (error.response?.status === 429) {
-      return true;
-    }
-    
-    // Check for server errors (5xx)
-    if (error.response?.status >= 500 && error.response?.status < 600) {
-      return true;
-    }
-    
-    // Don't retry client errors (4xx) except rate limiting
-    if (error.response?.status >= 400 && error.response?.status < 500) {
-      return false;
-    }
-    
-    // Don't retry for other errors
-    return false;
+    // Use error handler to determine if retryable
+    return this.errorHandler.isRetryableError(error);
   }
   
   /**
-   * Calculate delay with exponential backoff and jitter
+   * Calculate delay before next retry using error handler
    */
-  private calculateDelay(attempt: number): number {
-    // Calculate exponential delay
+  private calculateDelay(attempt: number, error: any): number {
+    // Get delay from error handler (handles rate limits, etc)
+    const errorDelay = this.errorHandler.getRetryDelay(error, attempt);
+    
+    // Apply our own backoff if error handler returns default
     const exponentialDelay = this.config.initialDelay * Math.pow(this.config.backoffMultiplier, attempt);
+    const baseDelay = Math.max(errorDelay, exponentialDelay);
     
-    // Add jitter (random factor between 0.5 and 1.5)
-    const jitterFactor = 0.5 + Math.random();
-    const jitteredDelay = exponentialDelay * jitterFactor;
+    // Apply jitter if enabled
+    if (this.config.enableJitter !== false) {
+      const jitteredDelay = baseDelay * (0.5 + Math.random() * 0.5);
+      return Math.min(jitteredDelay, this.config.maxDelay);
+    }
     
-    // Cap at maximum delay
-    return Math.min(jitteredDelay, this.config.maxDelay);
+    return Math.min(baseDelay, this.config.maxDelay);
   }
   
   /**

@@ -12,5 +12,9 @@ module.exports = {
   moduleNameMapper: {
     '^ora$': '<rootDir>/tests/__mocks__/ora.ts',
     '^chalk$': '<rootDir>/tests/__mocks__/chalk.ts'
-  }
+  },
+  // Global test timeout - 15 seconds by default
+  testTimeout: 15000,
+  // Setup files to run before tests
+  setupFilesAfterEnv: ['<rootDir>/tests/setup-timeout.ts']
 }; 

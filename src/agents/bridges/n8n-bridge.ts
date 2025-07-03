@@ -1,6 +1,8 @@
 import { N8nClient } from '../../services/n8n-client';
 import { ResponseTransformer } from '../../services/response-transformer';
 import { SessionTracker } from '../../services/session-tracker';
+import { N8nErrorHandler } from '../../services/n8n-error-handler';
+import { CircuitBreakerManager } from '../../utils/circuit-breaker';
 import { ProjectState } from '../state';
 import { ResearchResult, ResearchSummary } from '../types/research-types';
 
@@ -12,6 +14,11 @@ export interface N8nBridgeConfig {
   maxConcurrentRequests?: number;
   batchDelay?: number;
   sessionTrackerMaxAge?: number;
+  circuitBreakerConfig?: {
+    failureThreshold?: number;
+    resetTimeout?: number;
+    successThreshold?: number;
+  };
 }
 
 /**
@@ -22,6 +29,8 @@ export class N8nBridge {
   private client: N8nClient;
   private transformer: ResponseTransformer;
   private sessionTracker: SessionTracker;
+  private errorHandler: N8nErrorHandler;
+  private circuitBreakerManager: CircuitBreakerManager;
   private config: Required<N8nBridgeConfig>;
   
   constructor(config?: N8nBridgeConfig) {
@@ -32,12 +41,19 @@ export class N8nBridge {
       maxResultsPerSource: config?.maxResultsPerSource || 10,
       maxConcurrentRequests: config?.maxConcurrentRequests || 5,
       batchDelay: config?.batchDelay || 1000, // 1 second between batches
-      sessionTrackerMaxAge: config?.sessionTrackerMaxAge || 300000 // 5 minutes
+      sessionTrackerMaxAge: config?.sessionTrackerMaxAge || 300000, // 5 minutes
+      circuitBreakerConfig: {
+        failureThreshold: config?.circuitBreakerConfig?.failureThreshold || 5,
+        resetTimeout: config?.circuitBreakerConfig?.resetTimeout || 30000,
+        successThreshold: config?.circuitBreakerConfig?.successThreshold || 2
+      }
     };
     
     this.client = this.config.client;
     this.transformer = this.config.transformer;
     this.sessionTracker = new SessionTracker(this.config.sessionTrackerMaxAge);
+    this.errorHandler = new N8nErrorHandler();
+    this.circuitBreakerManager = new CircuitBreakerManager();
   }
   
   /**
@@ -80,9 +96,16 @@ export class N8nBridge {
         );
       }
       
-      // If both sources failed completely, throw to trigger the catch block
+      // If both sources failed completely, try fallback
       if (hnResult.status === 'rejected' && redditResult.status === 'rejected') {
-        throw new Error('All research sources failed');
+        // Track the overall failure
+        this.sessionTracker.trackFailure(
+          sessionId,
+          technology,
+          new Error('All research sources failed'),
+          `All research sources failed for ${technology}`
+        );
+        return this.createFallbackSummary(technology);
       }
       
       // Combine and analyze results
@@ -103,7 +126,7 @@ export class N8nBridge {
         recommendations
       };
     } catch (error) {
-      console.error(`[N8n Bridge] Failed to research ${technology}:`, error);
+      this.errorHandler.logError(error as Error, `researchTechnology: ${technology}`);
       this.sessionTracker.trackFailure(
         sessionId, 
         technology, 
@@ -111,15 +134,8 @@ export class N8nBridge {
         `researchTechnology failed for ${technology}`
       );
       
-      // Return minimal data on error
-      return {
-        query: technology,
-        timestamp: Date.now(),
-        totalResults: 0,
-        topResults: [],
-        insights: ['Research failed - external services may be unavailable'],
-        recommendations: [`Consider manual research for ${technology}`]
-      };
+      // Return fallback data
+      return this.createFallbackSummary(technology);
     }
   }
   
@@ -178,19 +194,27 @@ export class N8nBridge {
   }
   
   /**
-   * Search HackerNews via n8n webhook
+   * Search HackerNews via n8n webhook with circuit breaker
    */
   private async searchHackerNews(
     query: string,
     sessionId: string
   ): Promise<ResearchResult[]> {
     const startTime = Date.now();
+    const breaker = this.circuitBreakerManager.getBreaker('hackernews', {
+      failureThreshold: this.config.circuitBreakerConfig.failureThreshold!,
+      resetTimeout: this.config.circuitBreakerConfig.resetTimeout!,
+      successThreshold: this.config.circuitBreakerConfig.successThreshold!,
+      windowSize: 60000 // 1 minute window
+    });
     
     try {
-      const response = await this.client.searchHackerNewsTransformed(query, sessionId, {
-        limit: 30,
-        sortBy: 'relevance',
-        dateRange: 'last_year'
+      const response = await breaker.execute(async () => {
+        return await this.client.searchHackerNewsTransformed(query, sessionId, {
+          limit: 30,
+          sortBy: 'relevance',
+          dateRange: 'last_year'
+        });
       });
       
       // Track individual API call success
@@ -199,27 +223,41 @@ export class N8nBridge {
       
       return response;
     } catch (error) {
-      console.error('[N8n Bridge] HN search error:', error);
+      this.errorHandler.logError(error as Error, 'HackerNews Search');
+      
+      // Check if it's a circuit breaker error
+      if ((error as Error).message.includes('Circuit breaker is OPEN')) {
+        console.log('[N8n Bridge] HackerNews circuit breaker is OPEN, skipping request');
+      }
+      
       // Re-throw the error to be handled by Promise.allSettled
       throw error;
     }
   }
   
   /**
-   * Search Reddit via n8n webhook
+   * Search Reddit via n8n webhook with circuit breaker
    */
   private async searchReddit(
     query: string,
     sessionId: string
   ): Promise<ResearchResult[]> {
     const startTime = Date.now();
+    const breaker = this.circuitBreakerManager.getBreaker('reddit', {
+      failureThreshold: this.config.circuitBreakerConfig.failureThreshold!,
+      resetTimeout: this.config.circuitBreakerConfig.resetTimeout!,
+      successThreshold: this.config.circuitBreakerConfig.successThreshold!,
+      windowSize: 60000 // 1 minute window
+    });
     
     try {
-      const response = await this.client.searchRedditTransformed(query, sessionId, {
-        limit: 30,
-        sortBy: 'relevance',
-        timeframe: 'year',
-        subreddits: this.getTechSubreddits(query)
+      const response = await breaker.execute(async () => {
+        return await this.client.searchRedditTransformed(query, sessionId, {
+          limit: 30,
+          sortBy: 'relevance',
+          timeframe: 'year',
+          subreddits: this.getTechSubreddits(query)
+        });
       });
       
       // Track individual API call success
@@ -228,7 +266,13 @@ export class N8nBridge {
       
       return response;
     } catch (error) {
-      console.error('[N8n Bridge] Reddit search error:', error);
+      this.errorHandler.logError(error as Error, 'Reddit Search');
+      
+      // Check if it's a circuit breaker error
+      if ((error as Error).message.includes('Circuit breaker is OPEN')) {
+        console.log('[N8n Bridge] Reddit circuit breaker is OPEN, skipping request');
+      }
+      
       // Re-throw the error to be handled by Promise.allSettled
       throw error;
     }
@@ -513,5 +557,42 @@ export class N8nBridge {
    */
   cleanup(): void {
     this.sessionTracker.stopCleanupTimer();
+  }
+  
+  /**
+   * Create a fallback summary when all sources fail
+   */
+  private createFallbackSummary(technology: string): ResearchSummary {
+    console.log(`[N8n Bridge] Creating fallback summary for ${technology}`);
+    
+    return {
+      query: technology,
+      timestamp: Date.now(),
+      totalResults: 0,
+      topResults: [],
+      insights: [
+        'External research services are currently unavailable',
+        'Consider checking service status or trying again later'
+      ],
+      recommendations: [
+        `Manual research recommended for ${technology}`,
+        'Check official documentation and community forums directly',
+        'Service interruption may be temporary - retry in a few minutes'
+      ]
+    };
+  }
+  
+  /**
+   * Get circuit breaker statistics
+   */
+  getCircuitBreakerStats() {
+    return this.circuitBreakerManager.getAllStats();
+  }
+  
+  /**
+   * Reset all circuit breakers (useful for testing)
+   */
+  resetCircuitBreakers(): void {
+    this.circuitBreakerManager.resetAll();
   }
 } 

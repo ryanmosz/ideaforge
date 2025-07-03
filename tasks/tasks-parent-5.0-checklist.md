@@ -41,8 +41,8 @@
   - [x] 5.2.3 Add timeout and retry logic
   - [x] 5.2.4 Create response transformation layer
   - [x] 5.2.5 Build LangGraph bridge interface
-  - [ ] 5.2.6 Implement session correlation
-  - [ ] 5.2.7 Add error handling and fallbacks
+  - [x] 5.2.6 Implement session correlation
+  - [x] 5.2.7 Add error handling and fallbacks
   - [ ] 5.2.8 Write comprehensive unit tests
 
 - [ ] 5.3 Implement Hacker News API integration

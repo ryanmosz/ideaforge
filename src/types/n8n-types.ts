@@ -19,15 +19,22 @@ export interface N8nRequest<T = any> {
   };
 }
 
+/**
+ * Standardized response format from n8n webhooks
+ */
 export interface N8nResponse<T = any> {
-  status: 'success' | 'error' | 'rate_limited' | 'cached';
+  status: 'success' | 'error' | 'rate_limited';
   data?: T;
   error?: string;
   metadata?: {
     cached: boolean;
-    cacheAge?: number;
-    requestDuration: number;
+    cacheAge?: number; // milliseconds since cached
+    requestDuration: number; // milliseconds
     rateLimitRemaining?: number;
+    errorCode?: string;
+    errorContext?: any;
+    fallback?: boolean;
+    fallbackReason?: string;
   };
 }
 

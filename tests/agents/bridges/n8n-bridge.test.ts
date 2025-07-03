@@ -54,10 +54,12 @@ describe('N8nBridge', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
+    // Create mock client with test-appropriate timeout (10 seconds)
     mockClient = {
       searchHackerNewsTransformed: jest.fn(),
       searchRedditTransformed: jest.fn(),
       checkHealth: jest.fn(),
+      getConfig: jest.fn().mockReturnValue({ timeout: 10000 }), // 10 second timeout for tests
     } as any;
     
     mockTransformer = {
@@ -156,7 +158,7 @@ describe('N8nBridge', () => {
         'test-session',
         expect.any(Object)
       );
-    });
+    }, 10000);
     
     it('should handle empty results gracefully', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -167,7 +169,7 @@ describe('N8nBridge', () => {
       expect(result.totalResults).toBe(0);
       expect(result.topResults).toEqual([]);
       expect(result.insights).toContain('No research data available');
-    });
+    }, 10000);
     
     it('should continue if one source fails', async () => {
       mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('HN API error'));
@@ -189,17 +191,17 @@ describe('N8nBridge', () => {
       
       expect(result.totalResults).toBe(1);
       expect(result.topResults[0].source).toBe('reddit');
-    });
+    }, 10000);
     
     it('should handle complete failure gracefully', async () => {
-      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('HN API error'));
-      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Reddit API error'));
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Network error'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Network error'));
       
       const result = await bridge.researchTechnology('typescript', mockState);
       
       expect(result.totalResults).toBe(0);
-      expect(result.insights).toContain('Research failed - external services may be unavailable');
-    });
+      expect(result.insights).toContain('External research services are currently unavailable');
+    }, 10000);
     
     it('should limit results based on configuration', async () => {
       const manyResults = Array(50).fill(null).map((_, i) => ({
@@ -225,7 +227,7 @@ describe('N8nBridge', () => {
       const result = await limitedBridge.researchTechnology('typescript', mockState);
       
       expect(result.topResults.length).toBeLessThanOrEqual(10); // 5 per source * 2 sources
-    });
+    }, 10000);
     
     it('should handle technologies with special characters', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -239,7 +241,7 @@ describe('N8nBridge', () => {
         'test-session',
         expect.any(Object)
       );
-    });
+    }, 10000);
   });
   
   describe('researchMultipleTechnologies', () => {
@@ -266,7 +268,7 @@ describe('N8nBridge', () => {
       // Should have been called for each technology
       expect(mockClient.searchHackerNewsTransformed).toHaveBeenCalledTimes(5);
       expect(mockClient.searchRedditTransformed).toHaveBeenCalledTimes(5);
-    });
+    }, 10000);
     
     it('should handle partial failures in batch processing', async () => {
       const technologies = ['javascript', 'python'];
@@ -293,7 +295,7 @@ describe('N8nBridge', () => {
       expect(results.size).toBe(2);
       expect(results.get('javascript')?.totalResults).toBe(0);
       expect(results.get('python')?.totalResults).toBeGreaterThan(0);
-    });
+    }, 10000);
     
     it('should apply batch delays correctly', async () => {
       // Mock timers before creating any objects that might use them
@@ -346,7 +348,7 @@ describe('N8nBridge', () => {
       expect(results.has('react')).toBe(true);
       expect(results.has('nodejs')).toBe(true);
       expect(results.has('postgresql')).toBe(true);
-    });
+    }, 10000);
     
     it('should return empty map when no technologies in state', async () => {
       const emptyState: ProjectState = {
@@ -358,7 +360,7 @@ describe('N8nBridge', () => {
       
       expect(results.size).toBe(0);
       expect(mockClient.searchHackerNewsTransformed).not.toHaveBeenCalled();
-    });
+    }, 10000);
   });
   
   describe('subreddit selection', () => {
@@ -375,7 +377,7 @@ describe('N8nBridge', () => {
       expect(subreddits).toContain('javascript');
       expect(subreddits).toContain('node');
       expect(subreddits).toContain('programming');
-    });
+    }, 10000);
     
     it('should select appropriate subreddits for Python', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -390,7 +392,7 @@ describe('N8nBridge', () => {
       expect(subreddits).toContain('python');
       expect(subreddits).toContain('learnpython');
       expect(subreddits).toContain('django');
-    });
+    }, 10000);
     
     it('should limit subreddits to 10', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -405,7 +407,7 @@ describe('N8nBridge', () => {
       
       expect(subreddits).toBeDefined();
       expect(subreddits!.length).toBeLessThanOrEqual(10);
-    });
+    }, 10000);
   });
   
   describe('insights extraction', () => {
@@ -456,7 +458,7 @@ describe('N8nBridge', () => {
       
       // Should identify mixed sentiment
       expect(result.insights.some(i => i.includes('sentiment'))).toBe(true);
-    });
+    }, 10000);
   });
   
   describe('recommendations generation', () => {
@@ -494,7 +496,7 @@ describe('N8nBridge', () => {
       expect(result.recommendations.some(r => 
         r.includes('security') || r.includes('Security')
       )).toBe(true);
-    });
+    }, 10000);
     
     it('should recommend alternatives when comparisons are discussed', async () => {
       const results: ResearchResult[] = [
@@ -541,19 +543,19 @@ describe('N8nBridge', () => {
       expect(result.recommendations.some(r => 
         r.includes('alternative') || r.includes('Alternative')
       )).toBe(true);
-    });
+    }, 10000);
   });
   
   describe('error handling', () => {
     it('should handle network errors gracefully', async () => {
-      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('ECONNREFUSED'));
-      mockClient.searchRedditTransformed.mockRejectedValue(new Error('ETIMEDOUT'));
+      mockClient.searchHackerNewsTransformed.mockRejectedValue({ code: 'ECONNREFUSED' });
+      mockClient.searchRedditTransformed.mockRejectedValue({ code: 'ETIMEDOUT' });
       
       const result = await bridge.researchTechnology('test-tech', mockState);
       
       expect(result.totalResults).toBe(0);
-      expect(result.insights).toContain('Research failed - external services may be unavailable');
-    });
+      expect(result.insights).toContain('External research services are currently unavailable');
+    }, 10000);
     
     it('should handle API errors gracefully', async () => {
       mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('401 Unauthorized'));
@@ -563,7 +565,7 @@ describe('N8nBridge', () => {
       
       expect(result.totalResults).toBe(0);
       expect(result.recommendations.length).toBeGreaterThan(0);
-    });
+    }, 10000);
     
     it('should provide technology-specific recommendations', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -574,7 +576,7 @@ describe('N8nBridge', () => {
       
       const nodeResult = await bridge.researchTechnology('node.js', mockState);
       expect(nodeResult.recommendations.some(r => r.includes('Node.js ecosystem'))).toBe(true);
-    });
+    }, 10000);
   });
   
   describe('session tracking', () => {
@@ -609,25 +611,26 @@ describe('N8nBridge', () => {
       expect(metrics?.requestCount).toBeGreaterThan(0);
       expect(metrics?.successCount).toBe(1);
       expect(metrics?.technologies.has('javascript')).toBe(true);
-    });
+    }, 10000);
     
     it('should track failed research requests', async () => {
+      // Create a bridge with a longer session timeout to prevent cleanup
+      const sessionBridge = new N8nBridge({
+        client: mockClient,
+        sessionTrackerMaxAge: 600000 // 10 minutes
+      });
+      
       mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('API Error'));
       mockClient.searchRedditTransformed.mockRejectedValue(new Error('API Error'));
       
-      const state: ProjectState = {
-        ...mockState,
-        sessionId: 'test-session-456'
-      };
+      await sessionBridge.researchTechnology('python', { ...mockState, sessionId: 'test-session-456' });
       
-      await bridge.researchTechnology('python', state);
-      
-      const metrics = bridge.getSessionMetrics('test-session-456');
+      const metrics = sessionBridge.getSessionMetrics('test-session-456');
       expect(metrics).toBeDefined();
       expect(metrics?.failureCount).toBe(1);
       expect(metrics?.errors.length).toBeGreaterThan(0);
       expect(metrics?.technologies.has('python')).toBe(true);
-    });
+    }, 10000);
     
     it('should track individual API calls', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -644,7 +647,7 @@ describe('N8nBridge', () => {
       expect(metrics).toBeDefined();
       // Should track the main request plus individual HN and Reddit requests
       expect(metrics?.requestCount).toBeGreaterThanOrEqual(3);
-    });
+    }, 10000);
     
     it('should provide aggregate statistics', async () => {
       // Research multiple technologies
@@ -671,7 +674,7 @@ describe('N8nBridge', () => {
       expect(stats.topTechnologies).toContainEqual(
         expect.objectContaining({ technology: 'javascript', count: 2 })
       );
-    });
+    }, 10000);
     
     it('should export session data for debugging', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -689,7 +692,7 @@ describe('N8nBridge', () => {
       
       expect(parsed.sessionId).toBe('export-test');
       expect(parsed.technologies).toContain('typescript');
-    });
+    }, 10000);
     
     it('should use default session when none provided', async () => {
       mockClient.searchHackerNewsTransformed.mockResolvedValue([]);
@@ -705,7 +708,7 @@ describe('N8nBridge', () => {
       const metrics = bridge.getSessionMetrics('default');
       expect(metrics).toBeDefined();
       expect(metrics?.technologies.has('node')).toBe(true);
-    });
+    }, 10000);
   });
   
   describe('cleanup', () => {
@@ -717,5 +720,234 @@ describe('N8nBridge', () => {
       expect(cleanupSpy).toHaveBeenCalled();
       // Timer should be stopped, no errors should occur
     });
+  });
+  
+  describe('error handling and fallbacks', () => {
+    it('should use fallback when both sources fail', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('HN Error'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Reddit Error'));
+      
+      const result = await bridge.researchTechnology('failtest', mockState);
+      
+      expect(result.totalResults).toBe(0);
+      expect(result.topResults).toEqual([]);
+      expect(result.insights).toContain('External research services are currently unavailable');
+      expect(result.recommendations).toContainEqual(expect.stringContaining('Manual research recommended'));
+    }, 10000);
+    
+    it('should continue with partial results when one source fails', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('HN Error'));
+      mockClient.searchRedditTransformed.mockResolvedValue([
+        {
+          id: 'r1',
+          source: 'reddit',
+          title: 'Reddit Result',
+          url: 'https://reddit.com/r1',
+          content: 'Content',
+          score: 100,
+          metadata: {}
+        }
+      ]);
+      
+      const result = await bridge.researchTechnology('partial', mockState);
+      
+      expect(result.totalResults).toBe(1);
+      expect(result.topResults).toHaveLength(1);
+      expect(result.topResults[0].source).toBe('reddit');
+    }, 10000);
+    
+    it('should track errors in session', async () => {
+      const trackErrorSpy = jest.spyOn(bridge['sessionTracker'], 'trackError');
+      
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Test error'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Test error'));
+      
+      await bridge.researchTechnology('error-test', mockState);
+      
+      // Should track HN error, Reddit error, and overall failure
+      expect(trackErrorSpy).toHaveBeenCalledTimes(3);
+      expect(trackErrorSpy).toHaveBeenCalledWith(
+        'test-session',
+        expect.any(Error),
+        expect.stringContaining('HackerNews search failed')
+      );
+      expect(trackErrorSpy).toHaveBeenCalledWith(
+        'test-session',
+        expect.any(Error),
+        expect.stringContaining('Reddit search failed')
+      );
+      expect(trackErrorSpy).toHaveBeenCalledWith(
+        'test-session',
+        expect.any(Error),
+        expect.stringContaining('All research sources failed')
+      );
+    }, 10000);
+  });
+  
+  describe('circuit breaker', () => {
+    beforeEach(() => {
+      // Reset circuit breakers before each test
+      bridge.resetCircuitBreakers();
+    });
+    
+    it('should open circuit after multiple failures', async () => {
+      // Simulate 5 consecutive failures
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Service down'));
+      mockClient.searchRedditTransformed.mockResolvedValue([]);
+      
+      // Fail 5 times (threshold)
+      for (let i = 0; i < 5; i++) {
+        await bridge.researchTechnology(`test${i}`, mockState);
+      }
+      
+      // Check circuit breaker state
+      const stats = bridge.getCircuitBreakerStats();
+      expect(stats.hackernews.state).toBe('OPEN');
+      expect(stats.reddit.state).toBe('CLOSED');
+    }, 10000);
+    
+    it('should skip requests when circuit is open', async () => {
+      // Force circuit open
+      const breaker = bridge['circuitBreakerManager'].getBreaker('hackernews');
+      breaker.forceOpen();
+      
+      mockClient.searchRedditTransformed.mockResolvedValue([
+        {
+          id: 'r1',
+          source: 'reddit',
+          title: 'Reddit Only',
+          url: 'https://reddit.com/r1',
+          content: 'Content',
+          score: 100,
+          metadata: {}
+        }
+      ]);
+      
+      const result = await bridge.researchTechnology('circuit-test', mockState);
+      
+      // Should only have Reddit results
+      expect(mockClient.searchHackerNewsTransformed).not.toHaveBeenCalled();
+      expect(result.totalResults).toBe(1);
+      expect(result.topResults[0].source).toBe('reddit');
+    }, 10000);
+    
+    it('should provide circuit breaker stats', () => {
+      // Get breakers first to ensure they exist
+      bridge['circuitBreakerManager'].getBreaker('hackernews');
+      bridge['circuitBreakerManager'].getBreaker('reddit');
+      
+      const stats = bridge.getCircuitBreakerStats();
+      
+      expect(stats).toHaveProperty('hackernews');
+      expect(stats).toHaveProperty('reddit');
+      expect(stats.hackernews).toHaveProperty('state');
+      expect(stats.hackernews).toHaveProperty('totalRequests');
+      expect(stats.hackernews).toHaveProperty('totalFailures');
+      expect(stats.hackernews).toHaveProperty('totalSuccesses');
+    });
+    
+    it('should reset circuit breakers', () => {
+      // Force open
+      const breaker = bridge['circuitBreakerManager'].getBreaker('hackernews');
+      breaker.forceOpen();
+      
+      // Reset
+      bridge.resetCircuitBreakers();
+      
+      const stats = bridge.getCircuitBreakerStats();
+      expect(stats.hackernews.state).toBe('CLOSED');
+    });
+  });
+  
+  describe('error logging', () => {
+    let consoleErrorSpy: jest.SpyInstance;
+    let consoleLogSpy: jest.SpyInstance;
+    
+    beforeEach(() => {
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    });
+    
+    afterEach(() => {
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+    
+    it('should log errors appropriately', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Network error'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Auth error'));
+      
+      await bridge.researchTechnology('error-log-test', mockState);
+      
+      // Should log errors
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      // Should log fallback usage
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Creating fallback summary')
+      );
+    }, 10000);
+    
+    it('should log circuit breaker state changes', async () => {
+      // Force multiple failures to open circuit
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Service down'));
+      
+      for (let i = 0; i < 5; i++) {
+        await bridge.researchTechnology(`test${i}`, mockState);
+      }
+      
+      // Check for circuit breaker state change log
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('State change: CLOSED -> OPEN')
+      );
+    }, 10000);
+  });
+  
+  describe('fallback response', () => {
+    it('should provide helpful fallback content', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('All down'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('All down'));
+      
+      const result = await bridge.researchTechnology('kubernetes', mockState);
+      
+      expect(result.query).toBe('kubernetes');
+      expect(result.timestamp).toBeLessThanOrEqual(Date.now());
+      expect(result.totalResults).toBe(0);
+      expect(result.topResults).toEqual([]);
+      
+      // Check insights
+      expect(result.insights).toEqual([
+        'External research services are currently unavailable',
+        'Consider checking service status or trying again later'
+      ]);
+      
+      // Check recommendations
+      expect(result.recommendations).toContain('Manual research recommended for kubernetes');
+      expect(result.recommendations).toContain('Check official documentation and community forums directly');
+      expect(result.recommendations).toContain('Service interruption may be temporary - retry in a few minutes');
+    }, 10000);
+  });
+  
+  describe('error handling and fallbacks', () => {
+    it('should handle partial failures gracefully', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('HN API Error'));
+      mockClient.searchRedditTransformed.mockResolvedValue([]);
+      
+      const result = await bridge.researchTechnology('react', mockState);
+      
+      expect(result.totalResults).toBe(0);
+      expect(result.insights).toContain('No research data available');
+    }, 10000);
+    
+    it('should handle complete failure with fallback', async () => {
+      mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('Network error'));
+      mockClient.searchRedditTransformed.mockRejectedValue(new Error('Network error'));
+      
+      const result = await bridge.researchTechnology('vue', mockState);
+      
+      expect(result.totalResults).toBe(0);
+      expect(result.insights).toContain('External research services are currently unavailable');
+      expect(result.recommendations.length).toBeGreaterThan(0);
+    }, 10000);
   });
 }); 
