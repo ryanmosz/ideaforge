@@ -297,6 +297,9 @@ node scripts/add-rate-limiting-to-workflows.js
 
 ## Current Status
 - Subtasks 5.5.1, 5.5.2, 5.5.3, 5.5.4, 5.5.5, and 5.5.6 are complete
+- Total tests passing: 887 (19 new tests for metrics collector)
+- Rate limiting, caching, and monitoring are fully integrated
+- Ready for subtask 5.5.8 (Test under load conditions)
 
 ## Files to Review
 - `src/utils/cache-key-generator.ts` - NEW: Sophisticated cache key generation utility
@@ -483,36 +486,35 @@ Created `src/services/cache-warmer.ts` with comprehensive cache warming function
   - Minimum popularity score of 3 for automatic warming
   - Session-based warming to track rate limits properly
 
-### Key Technical Decisions
-- Dual-layer rate limiting: client-side prevention + n8n workflow enforcement
-- Sliding window algorithm for accurate request tracking
-- Memory-based state (no persistence between CLI runs)
-- Automatic waiting when rate limited
-- Comprehensive error handling with user-friendly messages
-- LRU eviction for cache memory management
-- Deterministic cache key generation with parameter sorting
-- UTC time for time-based keys to avoid timezone issues
-- Dynamic TTL strategies based on content type and usage patterns
-- Query pattern matching for intelligent cache duration
-- Popular query tracking for cache optimization
+### Subtask 5.5.7 Implementation (Completed)
+Created `src/utils/metrics-collector.ts` with comprehensive metrics tracking:
+- ✅ Created `src/utils/metrics-collector.ts` with comprehensive metrics tracking
+- ✅ Features implemented:
+  - Cache hit/miss tracking with latency measurements
+  - Rate limit event tracking (allowed/limited)
+  - API performance metrics (latency, errors, p95)
+  - Cache size and eviction tracking
+  - Rolling window metrics (last 1000 points per metric)
+  - Summary statistics with time windowing
+  - Text and JSON report generation
+- ✅ Integration completed:
+  - Updated n8n-client.ts to record metrics throughout
+  - Added eviction tracking to CacheManager
+  - Added metrics methods to n8n-client (getMetricsReport, getMetricsJSON, etc.)
+- ✅ Created `scripts/test-metrics.js` demonstration script
+- ✅ Added npm script: `npm run test:metrics`
+- ✅ Created comprehensive unit tests (19 tests, all passing)
+- ✅ Key metrics tracked:
+  - Cache performance: hit rate, latency, size, evictions
+  - Rate limiting: allowed/limited requests per API
+  - API performance: request count, error rate, latency distribution
+  - System metrics: cache utilization, memory usage
 
 ### Current Status
-- Subtasks 5.5.1, 5.5.2, 5.5.3, 5.5.4, 5.5.5, and 5.5.6 are complete
-- All tests passing (868 total):
-  - 46 tests in n8n-client.test.ts
-  - 26 tests in rate-limiter.test.ts
-  - 22 tests in cache-manager.test.ts
-  - 34 tests in cache-key-generator.test.ts
-  - 32 tests in ttl-strategies.test.ts
-  - 15 tests in smart-cache-manager.test.ts
-  - 23 tests in cache-warmer.test.ts (fixed test runner issues)
-- Rate limiting fully integrated into both client and n8n workflows
-- Cache manager implemented with memory-based storage, LRU eviction, and TTL support
-- Cache integrated into n8n client for HackerNews and Reddit searches
-- Sophisticated cache key generation system in place
-- Smart TTL strategies implemented with dynamic adjustments
-- Cache warming service operational with automatic and manual warming
-- Ready to proceed with subtask 5.5.7 (Add monitoring and metrics)
+- Subtasks 5.5.1-5.5.7 complete
+- All tests passing (887 total)
+- Rate limiting, caching, and monitoring fully integrated
+- Ready for subtask 5.5.8 (Test under load conditions)
 
 ### Outstanding Issues
 - None - all test runner issues have been resolved

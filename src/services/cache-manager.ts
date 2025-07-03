@@ -45,6 +45,8 @@ export interface CacheStats {
   oldestEntry?: number;
   /** Timestamp of newest entry */
   newestEntry?: number;
+  /** Total number of evicted entries */
+  evictions?: number;
 }
 
 /**
@@ -56,6 +58,7 @@ export class CacheManager {
   private cleanupInterval: NodeJS.Timeout | null = null;
   private hits: number = 0;
   private misses: number = 0;
+  private evictions: number = 0;
   
   constructor(private options: CacheOptions = {}) {
     this.options = {
@@ -157,6 +160,7 @@ export class CacheManager {
     this.totalSize = 0;
     this.hits = 0;
     this.misses = 0;
+    this.evictions = 0;
   }
   
   /**
@@ -221,7 +225,8 @@ export class CacheManager {
       totalSize: this.totalSize,
       hitRate: totalAccesses > 0 ? this.hits / totalAccesses : 0,
       oldestEntry: oldest === Infinity ? undefined : oldest,
-      newestEntry: newest || undefined
+      newestEntry: newest || undefined,
+      evictions: this.evictions
     };
   }
   
@@ -304,6 +309,7 @@ export class CacheManager {
       if (entry) {
         this.totalSize -= entry.metadata.size;
         this.cache.delete(key);
+        this.evictions++;
       }
     }
     

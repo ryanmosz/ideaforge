@@ -10,11 +10,22 @@
 - `tests/services/response-transformer.test.ts` - Response transformer tests
 - `src/utils/retry-handler.ts` - Retry logic with exponential backoff
 - `tests/utils/retry-handler.test.ts` - Retry handler tests
-- `src/services/cache-manager.ts` - Response caching implementation (TODO)
+- `src/services/cache-manager.ts` - Response caching implementation
+- `tests/services/cache-manager.test.ts` - Cache manager tests
 - `src/utils/rate-limiter.ts` - Rate limiting utility with sliding window algorithm
 - `tests/utils/rate-limiter.test.ts` - Rate limiter unit tests
 - `src/agents/bridges/n8n-bridge.ts` - LangGraph to n8n communication bridge
 - `tests/agents/bridges/n8n-bridge.test.ts` - Bridge unit tests
+- `src/utils/cache-key-generator.ts` - Cache key generation utility
+- `tests/utils/cache-key-generator.test.ts` - Cache key generator tests
+- `src/utils/ttl-strategies.ts` - Dynamic TTL strategy implementations
+- `tests/utils/ttl-strategies.test.ts` - TTL strategy tests
+- `src/services/smart-cache-manager.ts` - Smart cache with TTL strategies
+- `tests/services/smart-cache-manager.test.ts` - Smart cache manager tests
+- `src/services/cache-warmer.ts` - Cache warming service
+- `tests/services/cache-warmer.test.ts` - Cache warmer tests
+- `src/utils/metrics-collector.ts` - Metrics collection and reporting utility
+- `tests/utils/metrics-collector.test.ts` - Metrics collector tests
 - `n8n-workflows/hackernews-search.json` - n8n workflow for HN integration
 - `n8n-workflows/reddit-search.json` - n8n workflow for Reddit integration
 - `n8n-workflows/health-check.json` - n8n health check workflow
@@ -25,6 +36,9 @@
 - `scripts/verify-reddit-oauth.js` - Reddit OAuth verification script
 - `scripts/add-rate-limiting-to-workflows.js` - Script to add rate limiting nodes to workflows
 - `scripts/test-rate-limiting.js` - Rate limiting test script
+- `scripts/n8n-cache-key-generator.js` - n8n function node for cache key generation
+- `scripts/test-cache-warming.js` - Cache warming demonstration script
+- `scripts/test-metrics.js` - Metrics collection demonstration script
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
 - `.env.example` - Environment variables template
 
@@ -81,7 +95,7 @@
   - [x] 5.5.4 Implement cache key generation
   - [x] 5.5.5 Add TTL-based expiration (Fixed failing n8n-client tests)
   - [x] 5.5.6 Build cache warming logic
-  - [ ] 5.5.7 Add monitoring and metrics
+  - [x] 5.5.7 Add monitoring and metrics
   - [ ] 5.5.8 Test under load conditions
 
 - [ ] 5.6 Integration testing and documentation

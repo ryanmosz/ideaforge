@@ -17,6 +17,7 @@ import { rateLimitManager } from '../utils/rate-limiter';
 import { CacheKeyGenerator } from '../utils/cache-key-generator';
 import { CircuitBreaker } from '../utils/circuit-breaker';
 import { SmartCacheManager } from './smart-cache-manager';
+import { MetricsCollector } from '../utils/metrics-collector';
 
 /**
  * Client for communicating with n8n webhooks
@@ -28,6 +29,7 @@ export class N8nClient {
   private transformer: ResponseTransformer;
   private circuitBreaker: CircuitBreaker;
   private cacheManager: SmartCacheManager;
+  private metrics: MetricsCollector;
   
   constructor(config?: Partial<N8nConfig>, retryConfig?: Partial<RetryConfig>) {
     // Merge provided config with environment config
@@ -67,6 +69,8 @@ export class N8nClient {
       maxSize: 100 * 1024 * 1024, // 100MB
       popularityThreshold: 10
     });
+    
+    this.metrics = new MetricsCollector();
     
     this.setupInterceptors();
   }
@@ -168,6 +172,7 @@ export class N8nClient {
     options?: HNSearchOptions
   ): Promise<SearchResponse> {
     const endpoint = '/ideaforge/hackernews-search';
+    const startTime = Date.now();
     
     // Generate cache key
     const cacheKey = CacheKeyGenerator.generateSearchKey('hackernews', query, {
@@ -179,7 +184,12 @@ export class N8nClient {
     // Check cache first
     const cached = await this.cacheManager.get<SearchResponse>(cacheKey);
     if (cached) {
+      const cacheLatency = Date.now() - startTime;
       console.log(`[N8nClient] Cache hit for HackerNews query: "${query}"`);
+      
+      // Record cache hit
+      this.metrics.recordCacheHit('hackernews', true, cacheLatency);
+      
       return {
         ...cached,
         metadata: {
@@ -190,11 +200,20 @@ export class N8nClient {
       };
     }
     
+    // Record cache miss
+    this.metrics.recordCacheHit('hackernews', false);
+    
     // Check rate limits
     try {
       await rateLimitManager.checkAndWait('hackernews', sessionId);
+      // Record rate limit allowed
+      this.metrics.recordRateLimit('hackernews', false);
     } catch (error) {
       console.warn('[N8nClient] Rate limit exceeded for HackerNews API');
+      
+      // Record rate limit violation
+      this.metrics.recordRateLimit('hackernews', true);
+      
       return {
         success: false,
         data: { items: [] },
@@ -224,6 +243,10 @@ export class N8nClient {
         `HackerNews search: ${query}`
       );
       
+      // Record API latency
+      const apiLatency = Date.now() - startTime;
+      this.metrics.recordLatency('hackernews', 'search', apiLatency);
+      
       if (response.success && response.data) {
         // Cache the successful response with smart TTL
         const resultCount = response.data.items?.length || 0;
@@ -239,6 +262,9 @@ export class N8nClient {
       
       return response;
     } catch (error) {
+      // Record API error
+      this.metrics.recordError('hackernews', 'search', (error as any).code);
+      
       // Return error response instead of throwing
       return this.createErrorResponse(error, 'hackernews', query);
     }
@@ -253,6 +279,7 @@ export class N8nClient {
     options?: RedditSearchOptions
   ): Promise<SearchResponse> {
     const endpoint = '/ideaforge/reddit-search';
+    const startTime = Date.now();
     
     // Generate cache key
     const cacheKey = CacheKeyGenerator.generateSearchKey('reddit', query, {
@@ -265,7 +292,12 @@ export class N8nClient {
     // Check cache first
     const cached = await this.cacheManager.get<SearchResponse>(cacheKey);
     if (cached) {
+      const cacheLatency = Date.now() - startTime;
       console.log(`[N8nClient] Cache hit for Reddit query: "${query}"`);
+      
+      // Record cache hit
+      this.metrics.recordCacheHit('reddit', true, cacheLatency);
+      
       return {
         ...cached,
         metadata: {
@@ -276,11 +308,20 @@ export class N8nClient {
       };
     }
     
+    // Record cache miss
+    this.metrics.recordCacheHit('reddit', false);
+    
     // Check rate limits
     try {
       await rateLimitManager.checkAndWait('reddit', sessionId);
+      // Record rate limit allowed
+      this.metrics.recordRateLimit('reddit', false);
     } catch (error) {
       console.warn('[N8nClient] Rate limit exceeded for Reddit API');
+      
+      // Record rate limit violation
+      this.metrics.recordRateLimit('reddit', true);
+      
       return {
         success: false,
         data: { items: [] },
@@ -311,6 +352,10 @@ export class N8nClient {
         `Reddit search: ${query}`
       );
       
+      // Record API latency
+      const apiLatency = Date.now() - startTime;
+      this.metrics.recordLatency('reddit', 'search', apiLatency);
+      
       if (response.success && response.data) {
         // Cache the successful response with smart TTL
         const resultCount = response.data.items?.length || 0;
@@ -326,6 +371,9 @@ export class N8nClient {
       
       return response;
     } catch (error) {
+      // Record API error
+      this.metrics.recordError('reddit', 'search', (error as any).code);
+      
       // Return error response instead of throwing
       return this.createErrorResponse(error, 'reddit', query);
     }
@@ -440,12 +488,48 @@ export class N8nClient {
     const popularQueries = this.cacheManager.getPopularQueries();
     const trendingQueries = this.cacheManager.getTrendingQueries();
     
+    // Record cache size metrics
+    this.metrics.recordCacheSize(stats.totalSize, stats.entries, stats.evictions);
+    
     return {
       ...stats,
       effectiveness,
       popularQueries,
       trendingQueries
     };
+  }
+  
+  /**
+   * Get metrics report
+   */
+  getMetricsReport(windowMs: number = 3600000): string {
+    return this.metrics.exportReport(windowMs);
+  }
+  
+  /**
+   * Get metrics as JSON
+   */
+  getMetricsJSON(windowMs: number = 3600000): Record<string, any> {
+    return this.metrics.exportJSON(windowMs);
+  }
+  
+  /**
+   * Get specific metrics summary
+   */
+  getMetricsSummary(windowMs: number = 3600000) {
+    return {
+      cache: this.metrics.getCacheMetrics(windowMs),
+      rateLimit: this.metrics.getRateLimitMetrics(windowMs),
+      api: this.metrics.getAPIMetrics(windowMs),
+      report: this.metrics.exportReport(windowMs)
+    };
+  }
+  
+  /**
+   * Reset metrics
+   */
+  resetMetrics(): void {
+    this.metrics.reset();
   }
   
   /**

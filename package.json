@@ -24,6 +24,7 @@
     "test:group": "ts-node tests/test-runner.ts --group",
     "test:rate-limits": "npm run build && node scripts/test-rate-limiting.js",
     "test:cache-warming": "npm run build && node scripts/test-cache-warming.js",
+    "test:metrics": "npm run build && node scripts/test-metrics.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint 'src/**/*.ts' 'tests/**/*.ts' --fix",
