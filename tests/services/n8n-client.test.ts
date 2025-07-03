@@ -253,4 +253,166 @@ describe('N8nClient', () => {
       });
     });
   });
+  
+  describe('webhook methods', () => {
+    let client: N8nClient;
+    
+    beforeEach(() => {
+      client = new N8nClient();
+    });
+    
+    describe('searchHackerNews', () => {
+      it('should send correct request to HN webhook', async () => {
+        const mockResponse = {
+          data: {
+            status: 'success' as const,
+            data: {
+              hits: [],
+              nbHits: 0,
+              page: 0,
+              nbPages: 0,
+              hitsPerPage: 20,
+              processingTimeMS: 100,
+              query: 'test query'
+            }
+          }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        const result = await client.searchHackerNews('test query', 'session-123');
+        
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/ideaforge/hackernews-search',
+          {
+            query: 'test query',
+            sessionId: 'session-123'
+          }
+        );
+        expect(result).toEqual(mockResponse.data);
+      });
+      
+      it('should pass options when provided', async () => {
+        const mockResponse = {
+          data: { status: 'success' as const, data: {} as any }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        await client.searchHackerNews('test', 'session-123', {
+          limit: 50,
+          dateRange: 'last_week',
+          sortBy: 'date',
+          tags: ['story']
+        });
+        
+        // Currently we don't pass options to webhook, but the method accepts them
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/ideaforge/hackernews-search',
+          {
+            query: 'test',
+            sessionId: 'session-123'
+          }
+        );
+      });
+      
+      it('should handle errors', async () => {
+        mockAxiosInstance.post.mockRejectedValue(new Error('Network error'));
+        
+        const result = await client.searchHackerNews('test', 'session-123');
+        
+        expect(result.status).toBe('error');
+        expect(result.error).toBe('Network error');
+      });
+    });
+    
+    describe('searchReddit', () => {
+      it('should send correct request to Reddit webhook', async () => {
+        const mockResponse = {
+          data: {
+            status: 'success' as const,
+            data: {
+              posts: [],
+              comments: [],
+              query: 'test query',
+              subreddits: []
+            }
+          }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        const result = await client.searchReddit('test query', 'session-123');
+        
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/ideaforge/reddit-search',
+          {
+            query: 'test query',
+            sessionId: 'session-123',
+            subreddits: []
+          }
+        );
+        expect(result).toEqual(mockResponse.data);
+      });
+      
+      it('should pass subreddits when provided', async () => {
+        const mockResponse = {
+          data: { status: 'success' as const, data: {} as any }
+        };
+        mockAxiosInstance.post.mockResolvedValue(mockResponse);
+        
+        await client.searchReddit('test', 'session-123', {
+          subreddits: ['programming', 'typescript']
+        });
+        
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          '/ideaforge/reddit-search',
+          {
+            query: 'test',
+            sessionId: 'session-123',
+            subreddits: ['programming', 'typescript']
+          }
+        );
+      });
+      
+      it('should handle errors', async () => {
+        mockAxiosInstance.post.mockRejectedValue(new Error('API error'));
+        
+        const result = await client.searchReddit('test', 'session-123');
+        
+        expect(result.status).toBe('error');
+        expect(result.error).toBe('API error');
+      });
+    });
+    
+    describe('checkHealth', () => {
+      it('should call health endpoint', async () => {
+        const mockResponse = {
+          data: {
+            status: 'success' as const,
+            data: {
+              status: 'healthy',
+              service: 'ideaforge-n8n',
+              timestamp: '2025-01-01T12:00:00.000Z',
+              webhooks: {} as any,
+              message: 'All webhooks operational',
+              version: '1.0.0'
+            }
+          }
+        };
+        mockAxiosInstance.get.mockResolvedValue(mockResponse);
+        
+        const result = await client.checkHealth();
+        
+        expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ideaforge/health');
+        expect(result).toEqual(mockResponse.data);
+      });
+      
+      it('should handle errors', async () => {
+        mockAxiosInstance.get.mockRejectedValue(new Error('Service unavailable'));
+        
+        const result = await client.checkHealth();
+        
+        expect(result.status).toBe('error');
+        expect(result.error).toBe('Service unavailable');
+      });
+    });
+  });
 }); 

@@ -1,5 +1,13 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { N8nConfig, N8nResponse } from '../types/n8n-types';
+import { 
+  N8nConfig, 
+  N8nResponse,
+  HNSearchOptions,
+  HNSearchResults,
+  RedditSearchOptions,
+  RedditSearchResults,
+  HealthCheckResponse
+} from '../types/n8n-types';
 import { getN8nConfig } from '../config/n8n-config';
 
 /**
@@ -94,6 +102,81 @@ export class N8nClient {
     } catch (error) {
       return false;
     }
+  }
+  
+  /**
+   * Search Hacker News for relevant content
+   */
+  async searchHackerNews(
+    query: string, 
+    sessionId: string,
+    _options?: HNSearchOptions  // TODO: Use when n8n webhooks support options
+  ): Promise<N8nResponse<HNSearchResults>> {
+    // TODO: When n8n webhooks support advanced options, use this:
+    // const request: N8nRequest<HNSearchPayload> = {
+    //   action: 'searchHackerNews',
+    //   payload: {
+    //     query,
+    //     options: {
+    //       limit: options?.limit || 20,
+    //       dateRange: options?.dateRange || 'all',
+    //       sortBy: options?.sortBy || 'relevance',
+    //       tags: options?.tags || ['story', 'comment']
+    //     }
+    //   },
+    //   sessionId,
+    //   metadata: this.createMetadata()
+    // };
+    
+    // For now, we just pass query and sessionId as the webhook expects
+    const simplifiedRequest = {
+      query,
+      sessionId
+    };
+    
+    return this.post<HNSearchResults>('/ideaforge/hackernews-search', simplifiedRequest);
+  }
+  
+  /**
+   * Search Reddit for relevant content
+   */
+  async searchReddit(
+    query: string,
+    sessionId: string,
+    options?: RedditSearchOptions
+  ): Promise<N8nResponse<RedditSearchResults>> {
+    // TODO: When n8n webhooks support advanced options, use this:
+    // const request: N8nRequest<RedditSearchPayload> = {
+    //   action: 'searchReddit',
+    //   payload: {
+    //     query,
+    //     subreddits: options?.subreddits || [],
+    //     options: {
+    //       sortBy: options?.sortBy || 'relevance',
+    //       timeframe: options?.timeframe || 'all',
+    //       limit: options?.limit || 25,
+    //       includeComments: options?.includeComments ?? true
+    //     }
+    //   },
+    //   sessionId,
+    //   metadata: this.createMetadata()
+    // };
+    
+    // For now, we pass query, sessionId, and subreddits as the webhook expects
+    const simplifiedRequest = {
+      query,
+      sessionId,
+      subreddits: options?.subreddits || []
+    };
+    
+    return this.post<RedditSearchResults>('/ideaforge/reddit-search', simplifiedRequest);
+  }
+  
+  /**
+   * Check health status of n8n webhooks
+   */
+  async checkHealth(): Promise<N8nResponse<HealthCheckResponse>> {
+    return this.get<HealthCheckResponse>('/ideaforge/health');
   }
   
   // /**

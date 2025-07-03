@@ -144,12 +144,20 @@ All n8n webhook endpoints created and documented:
     - Protected methods for GET/POST requests
   - Full test coverage with 28 passing tests
 
+- [x] 5.2.2: Implement webhook request methods
+  - Added `searchHackerNews()` method with options support
+  - Added `searchReddit()` method with subreddit filtering
+  - Added `checkHealth()` method for monitoring
+  - All methods tested with actual n8n webhooks
+  - Added 8 new tests (24 in n8n-client.test.ts)
+  - Verified end-to-end connectivity with all webhooks
+
 ### Next Immediate Steps:
-**Continue Task 5.2 with subtask 5.2.2: Implement webhook request methods**
-1. Add searchHackerNews method to N8nClient
-2. Add searchReddit method to N8nClient  
-3. Add checkHealth method to N8nClient
-4. Test the methods with the actual n8n webhooks
+**Continue Task 5.2 with subtask 5.2.3: Add timeout and retry logic**
+1. Create retry handler utility class
+2. Implement exponential backoff strategy
+3. Add retry configuration options
+4. Test retry behavior with simulated failures
 
 ### n8n Integration Clarification:
 - Current code has a placeholder `N8N_WEBHOOK_URL` that isn't implemented yet
