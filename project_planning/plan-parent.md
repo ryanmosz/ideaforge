@@ -150,14 +150,43 @@ describe('DataExtractor', () => {
 - Include actual file paths and function names
 - Reference specific lines from the PRD where applicable
 
-
-
 ### Step 3: Task List Generation
 
 Following the Parent Task Development Plan Request, I will generate detailed task lists using the format from `generate-tasks.mdc`:
 
 1. **tasks-parent-[TASK-ID]-checklist.md** - Checkbox list with task codes
 2. **tasks-parent-[TASK-ID]-detailed.md** - Detailed implementation information
+
+### Step 4: Detailed Task File Management (500-Line Limit)
+
+When creating detailed task files:
+
+1. **File Length Target**: Aim for approximately 500 lines per detailed task file
+   - This keeps files manageable and focused
+   - Allows for easier review and navigation
+   - Prevents overwhelming documentation
+
+2. **Multiple Detail Files**: When a parent task requires more than 500 lines of detail:
+   - Create multiple numbered files: `tasks-parent-[TASK-ID].[SUBTASK-ID]-detailed.md`
+   - Example: `tasks-parent-5.6.1-detailed.md`, `tasks-parent-5.6.2-detailed.md`, etc.
+   - Each file should cover a logical grouping of subtasks
+
+3. **Checklist References**: When multiple detail files exist:
+   - Update the checklist to indicate which file contains each subtask's details
+   - Add notes under parent task entries showing the file mapping
+   - Example format:
+     ```markdown
+     - [ ] 5.6 Integration testing and documentation
+       - [ ] 5.6.1 Create end-to-end integration tests (Details in: tasks-parent-5.6.1-detailed.md)
+       - [ ] 5.6.2 Test complete research flow (Details in: tasks-parent-5.6.1-detailed.md)
+       - [ ] 5.6.4 Update project README (Details in: tasks-parent-5.6.2-detailed.md)
+     ```
+
+4. **File Organization Guidelines**:
+   - Group related subtasks in the same detail file
+   - Never delete successfully created files
+   - Maintain logical coherence within each file
+   - Include clear headers indicating which subtasks are covered
 
 ## Output
 

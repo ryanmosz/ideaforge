@@ -78,7 +78,7 @@
   - [x] 4.8 Create LangGraph-CLI communication layer
 
 - [ ] 5.0 Develop n8n integration for external APIs
-  - [ ] 5.1 Create n8n webhook endpoints for CLI
+  - [x] 5.1 Create n8n webhook endpoints for CLI
   - [ ] 5.2 Implement Hacker News API integration workflow
   - [ ] 5.3 Build Reddit API integration workflow
   - [ ] 5.4 Set up rate limiting and retry logic

@@ -65,11 +65,15 @@ npm link
 ### Configuration
 ```bash
 # Copy environment template
-cp .env.example .env
+cp env.example .env
 
 # Add your API keys
 OPENAI_API_KEY=your_openai_key
-N8N_WEBHOOK_URL=your_n8n_webhook_url
+
+# For external research features (optional)
+# See docs/n8n-setup.md for detailed setup
+N8N_BASE_URL=http://localhost:5678
+N8N_API_KEY=local-dev-api-key-12345
 ```
 
 ### Basic Usage
@@ -168,10 +172,18 @@ ideaforge export analysis-final.org --format cursor --output tasks.md
 ## 🛠️ Technical Architecture
 
 - **CLI Framework**: Node.js with TypeScript
-- **AI Processing**: OpenAI GPT-4 via n8n workflows
-- **Workflow Engine**: n8n (self-hosted on Elestio)
+- **AI Processing**: OpenAI GPT-4 via LangGraph agents
+- **Workflow Engine**: n8n for external API integrations
 - **Export Formats**: Org-mode and Markdown
-- **External APIs**: Hacker News, Reddit
+- **External APIs**: Hacker News, Reddit (via n8n)
+
+### n8n Integration (Optional)
+IdeaForge can use n8n webhooks for:
+- External API calls with rate limiting
+- Reddit and Hacker News research
+- Cached responses for better performance
+
+See [n8n Setup Guide](docs/n8n-setup.md) for configuration.
 
 ## 📊 Benefits for Project Planning
 

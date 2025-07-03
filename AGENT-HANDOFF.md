@@ -1,179 +1,179 @@
-# AGENT HANDOFF - IdeaForge Project Status
+# Agent Handoff Document
+
+This document tracks the current state of the IdeaForge project, recent progress, and next steps for seamless agent transitions.
 
 ## Project Overview
-IdeaForge is a CLI tool for transforming project ideas into actionable plans using MoSCoW prioritization and Kano model analysis, powered by LangGraph AI agents.
+IdeaForge is a CLI tool that transforms project ideas into actionable development plans using AI analysis, MoSCoW/Kano frameworks, and external research integration.
 
-## Current State
-- **Branch**: `feature/task-4.0-langgraph`
-- **Parent Task**: 4.0 - Implement LangGraph Agent Architecture
-- **Status**: ✅ COMPLETE - All subtasks implemented (32/32 tasks)
-- **Prerequisites**: ✅ Parent Tasks 1.0, 2.0, and 3.0 COMPLETE
-- **Tests**: ✅ All 483 tests passing
+## Current Task Status
 
-## What's Been Built So Far
+### Active Parent Task: 5.0 - Develop n8n integration for external APIs
+**Status**: Task 5.1 Complete, Ready for Task 5.2
+**Location**: Feature branch `feature/task-5.0-n8n-integration`
+**Progress**: 1 of 6 main tasks complete
 
-### Parent Task 1.0: Project Foundation ✅ COMPLETE
-- TypeScript project with strict configuration
-- Jest testing framework with ts-jest
-- ESLint with 500-line rule
-- Environment configuration system
-- CLI executable with basic command stubs
-- 73 tests for project setup
+#### Recent Progress:
+1. **Documentation Updates (Just Completed)**:
+   - Updated `project_planning/plan-parent.md` with guidance for 500-line limit on detailed task files
+   - Added section explaining how to handle multiple detail files per parent task
+   - Updated `tasks/tasks-parent-5.0-checklist.md` to include file references for task 5.6 subtasks
 
-### Parent Task 2.0: Org-mode Parsing ✅ COMPLETE
-- Full org-mode parser (`src/parsers/orgmode-parser.ts`)
-- Template validator (`src/parsers/orgmode-validator.ts`)
-- Data extractor (`src/parsers/data-extractor.ts`)
-- File handler with read/write capabilities (`src/services/file-handler.ts`)
-- Export to org-mode and cursor markdown formats
-- Comprehensive error handling
-- 126 tests for parsing functionality
+2. **Task File Organization for 5.6**:
+   - Created 5 detailed task files for task 5.6 (Integration testing and documentation):
+     - `tasks-parent-5.6.1-detailed.md` - Testing tasks (5.6.1-5.6.3)
+     - `tasks-parent-5.6.2-detailed.md` - Documentation tasks (5.6.4-5.6.5)
+     - `tasks-parent-5.6.3-detailed.md` - API configuration (5.6.6)
+     - `tasks-parent-5.6.4-detailed.md` - Usage examples (5.6.7)
+     - `tasks-parent-5.6.5-detailed.md` - Troubleshooting guide (5.6.8)
 
-### Parent Task 3.0: Build CLI Framework ✅ COMPLETE
-- **3.6**: Enhanced ProgressManager with verbose output by default (timestamps, elapsed time)
-- **3.1**: Main CLI entry point with BaseCommand pattern
-- **3.2**: Analyze command - processes org-mode files and extracts data
-- **3.4**: Export command - converts between cursor and orgmode formats
-- **3.3**: Refine command - processes :RESPONSE: tags with auto-versioning
-- **3.5**: Visualize command stubs - placeholders for future features
-- **Total**: 254 tests passing (55 new tests added)
+3. **Completed Planning Documents**:
+   - PRD: `/tasks/prd-parent-task-5.0.md`
+   - Checklist: `/tasks/tasks-parent-5.0-checklist.md` (with file references)
+   - Detailed tasks split across multiple files (5.1 through 5.6.5)
 
-### Parent Task 4.0: Implement LangGraph Agent Architecture ✅ COMPLETE
-- **4.1**: LangGraph project structure with TypeScript support
-- **4.2**: ProjectState schema with comprehensive typing
-- **4.3**: Core analysis nodes (DocumentParser, RequirementsAnalysis, MoscowCategorization, KanoEvaluation, DependencyAnalysis)
-- **4.4**: Research nodes (TechnologyExtraction, HackerNewsSearch, RedditSearch, AdditionalResearch, ResearchSynthesis)
-- **4.5**: Refinement nodes (ResponseProcessing, FeedbackIntegration, ChangelogGeneration)
-- **4.6**: Graph edges with conditional routing
-- **4.7**: State persistence using LangGraph's MemorySaver and SessionManager
-- **4.8**: AgentRunner service integrating CLI with LangGraph (analyze/refine methods, progress streaming, interruption handling)
-- **Total**: 483 tests passing (229 new tests added)
+4. **Development Plan Created**: Phased approach for implementation:
+   - **Phase 1**: Foundation (5.1 + 5.2.1-5.2.5) - n8n setup & client
+   - **Phase 2**: Bridge Integration (5.2.6-5.2.8) - LangGraph connection
+   - **Phase 3**: API Integrations (5.3 + 5.4) - HN & Reddit
+   - **Phase 4**: Performance (5.5) - Rate limiting & caching
+   - **Phase 5**: Final Integration (5.6) - Testing & documentation
 
-## Architecture Overview
+5. **Task 5.1.1 Completed**: n8n local setup
+   - Docker container running: `docker run -d --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n n8nio/n8n`
+   - Web interface accessible at http://localhost:5678
+   - Helper script created: `scripts/n8n-local.sh` for container management
+   - Environment variables documented (user needs to add to .env)
+   - Ready for webhook workflow creation
 
-```
-User → CLI Command → BaseCommand → AgentRunner → LangGraph → AI Nodes
-                         ↓              ↓             ↓          ↓
-                  ProgressManager  SessionManager  State    Analysis
-                         ↓              ↓             ↓          ↓
-          Rich feedback w/progress  Persistence  Memory    Results
-```
+6. **Task 5.1.2 Completed**: HackerNews search webhook
+   - Workflow name: "IdeaForge - HackerNews Search"
+   - Webhook path: `ideaforge/hackernews-search`
+   - Features implemented:
+     - POST method webhook receiver
+     - Request validation (requires `query` and `sessionId`)
+     - Query sanitization (200 char limit)
+     - Timestamp addition (`processedAt`)
+   - Production URL: `http://localhost:5678/webhook/ideaforge/hackernews-search`
+   - Tested and working in both test and production modes
 
-### Key Components Added in Task 4.0
+7. **Task 5.1.3 Completed**: Reddit search webhook
+   - Workflow name: "IdeaForge - Reddit Search"
+   - Webhook path: `ideaforge/reddit-search`
+   - Features implemented:
+     - POST method webhook receiver
+     - Request validation (requires `query` and `sessionId`)
+     - Subreddit handling (accepts array, limits to 10, provides defaults)
+     - Query sanitization (200 char limit)
+     - Timestamp and webhook type addition
+   - Default subreddits: programming, webdev, javascript, typescript, node, learnprogramming
+   - Production URL: `http://localhost:5678/webhook/ideaforge/reddit-search`
+   - Tested with custom subreddits and default subreddits
 
-1. **AgentRunner** (`src/services/agent-runner.ts`)
-   - Bridge between CLI and LangGraph
-   - Methods: analyze(), refine()
-   - Progress event streaming
-   - Interruption handling (SIGINT/SIGTERM)
-   - Session management
+8. **Task 5.1.4 Completed**: Webhook authentication
+   - Updated both HackerNews and Reddit webhooks
+   - Authentication method: API key in X-API-Key header
+   - Local development key: `local-dev-api-key-12345`
+   - Features implemented:
+     - Checks for X-API-Key header presence
+     - Validates API key matches expected value
+     - Returns error for missing or invalid keys
+     - Adds `authenticated: true` to successful requests
+   - Tested all scenarios: both webhooks properly reject unauthorized requests
 
-2. **LangGraph Components**
-   - **ProjectState**: Comprehensive state schema
-   - **Analysis Nodes**: 5 core nodes for document analysis
-   - **Research Nodes**: 5 nodes for external research
-   - **Refinement Nodes**: 3 nodes for feedback processing
-   - **Routing**: Conditional edges for workflow control
+9. **Task 5.1.5 Completed**: CORS headers for local development
+   - Added "Respond to Webhook" nodes to both workflows
+   - Configured CORS headers:
+     - Access-Control-Allow-Origin: * (allows any origin for dev)
+     - Access-Control-Allow-Methods: POST, OPTIONS
+     - Access-Control-Allow-Headers: Content-Type, X-API-Key
+     - Access-Control-Max-Age: 86400
+   - Updated Code nodes to handle OPTIONS preflight requests
+   - Webhook nodes reconfigured to use "Respond to Webhook Node" mode
+   - Both webhooks tested with OPTIONS and POST requests
+   - Browser-based applications can now call the webhooks
 
-3. **Persistence Layer**
-   - **SessionManager**: Creates/retrieves analysis sessions
-   - **MemorySaver**: LangGraph checkpointer for state persistence
-   - Session IDs based on file paths for consistency
+10. **Task 5.1.6 Completed**: Health check endpoint
+    - Workflow name: "IdeaForge - Health Check"
+    - Webhook path: `ideaforge/health`
+    - Method: GET (standard for health checks)
+    - No authentication required
+    - Returns JSON with:
+      - Service status and timestamp
+      - List of all available webhooks
+      - Authentication requirements for each endpoint
+      - Supported HTTP methods
+    - CORS enabled for browser access
+    - Production URL: `http://localhost:5678/webhook/ideaforge/health`
+    - Useful for monitoring and debugging
 
-4. **AI Integration**
-   - Each node uses OpenAI for intelligent processing
-   - Prompts optimized for specific tasks
-   - Streaming responses for real-time feedback
+11. **Task 5.1.7 Completed**: Export and version control workflows
+    - Exported all 3 workflows from n8n as JSON files
+    - Created `n8n-workflows/` directory structure:
+      - `hackernews-search.json` - HackerNews webhook workflow
+      - `reddit-search.json` - Reddit webhook workflow  
+      - `health-check.json` - Health check workflow
+      - `README.md` - Comprehensive documentation
+      - `deploy.sh` - Deployment helper script
+    - Documentation includes:
+      - Import instructions (UI and CLI methods)
+      - Configuration guidance
+      - Testing examples
+      - Production deployment notes
+    - All files ready for git commit and version control
 
-## Available CLI Commands (Now AI-Powered)
+### Task 5.1 COMPLETE ✅
+All n8n webhook endpoints created and documented:
+- ✅ HackerNews search webhook
+- ✅ Reddit search webhook  
+- ✅ Health check endpoint
+- ✅ Authentication implemented
+- ✅ CORS support added
+- ✅ Workflows exported and version controlled
+- ✅ Complete documentation created
 
-```bash
-# Analyze org-mode file with AI
-./bin/ideaforge analyze <file> [--output <path>] [--fresh]
+### Task 5.2 IN PROGRESS: Build communication bridge to LangGraph
 
-# Export to different formats (includes AI insights)
-./bin/ideaforge export <file> [--format cursor|orgmode] [--output <path>]
+**Completed:**
+- [x] 5.2.1: Create n8n client service class
+  - Created `src/types/n8n-types.ts` with all necessary interfaces
+  - Created `src/config/n8n-config.ts` with configuration helper
+  - Created `src/services/n8n-client.ts` base client class with:
+    - Axios instance with interceptors
+    - Error handling and logging
+    - Connection testing capability
+    - Protected methods for GET/POST requests
+  - Full test coverage with 28 passing tests
 
-# Refine with AI feedback processing
-./bin/ideaforge refine <file> [--output <path>]
+### Next Immediate Steps:
+**Continue Task 5.2 with subtask 5.2.2: Implement webhook request methods**
+1. Add searchHackerNews method to N8nClient
+2. Add searchReddit method to N8nClient  
+3. Add checkHealth method to N8nClient
+4. Test the methods with the actual n8n webhooks
 
-# Visualization stubs (v2.0 features)
-./bin/ideaforge visualize flow <file> [--format png|svg|ascii]
-./bin/ideaforge visualize tables <file> [--output <path>]
-```
+### n8n Integration Clarification:
+- Current code has a placeholder `N8N_WEBHOOK_URL` that isn't implemented yet
+- Task 5.0 will build the actual n8n integration
+- Two options for n8n:
+  - **Local**: Run with Docker at http://localhost:5678 (recommended for dev)
+  - **Cloud**: Use n8n.cloud instance if you have an account
+- Will refactor config to use `N8N_BASE_URL` and `N8N_API_KEY` separately
+- User has Elestio n8n instance configured as `N8N_WEBHOOK_URL` (ready for production)
+- Local development env configured and n8n running successfully
 
-## Next Parent Task: 5.0 - Develop n8n Integration for External APIs
+### Implementation Approach:
+- **Phased implementation** with testing checkpoints between phases
+- Each phase builds on the previous one
+- Natural testing points to ensure quality
+- Estimated 21-28 hours total development time
 
-### What Task 5.0 Will Do
-- Create n8n workflows for external API integrations
-- Implement webhook endpoints for research nodes
-- Set up API connectors for HackerNews, Reddit, and custom sources
-- Create data transformation pipelines
-- Add caching and rate limiting
-- Integrate with existing research nodes
+### Completed Parent Tasks:
+- ✅ 1.0 Set up project foundation and development environment
+- ✅ 2.0 Implement org-mode parsing and file handling  
+- ✅ 3.0 Build CLI framework and command structure
+- ✅ 4.0 Implement LangGraph agent architecture
 
-### Key Integration Points
-- Research nodes will call n8n webhooks instead of direct APIs
-- n8n will handle authentication, rate limiting, and caching
-- Results will be transformed and returned to LangGraph
-- Error handling and retries managed by n8n
-
-### Prerequisites for Task 5.0
-- ✅ LangGraph agent architecture complete (Task 4.0)
-- ✅ Research nodes implemented (Task 4.4)
-- Need: n8n instance running
-- Need: N8N_WEBHOOK_URL configured
-- Need: API keys for external services
-
-## Development Guidelines
-
-### Testing Requirements
-- All 483 tests currently passing
-- Test coverage maintained above 80%
-- New features require tests before implementation
-
-### Git Workflow
-- Current branch: `feature/task-4.0-langgraph`
-- Ready to merge to main and create `feature/task-5.0-n8n-integration`
-- Use conventional commits (feat:, fix:, docs:, etc.)
-
-### File Limits
-- All files under 500 lines (enforced by ESLint)
-- Largest files properly modularized
-
-## Environment Setup
-```bash
-# Required for full functionality
-OPENAI_API_KEY=your_key          # Currently used
-N8N_WEBHOOK_URL=your_webhook_url  # Needed for Task 5.0
-
-# Test the CLI
-npm run build
-./bin/ideaforge --help
-./bin/ideaforge analyze ideaforge-template.org
-```
-
-## Testing the Current Implementation
-```bash
-# Run all tests
-npm test  # 483 tests pass
-
-# Build and test CLI
-npm run build
-./bin/ideaforge --version  # 1.0.0
-
-# Test AI-powered analyze
-./bin/ideaforge analyze ideaforge-template.org
-
-# Test export with AI insights
-./bin/ideaforge export ideaforge-results.org --format cursor
-
-# Test AI-powered refine
-./bin/ideaforge refine analysis.org  # Processes :RESPONSE: tags with AI
-
-# Test interruption (Ctrl+C during analysis)
-./bin/ideaforge analyze large-file.org  # Press Ctrl+C to test graceful shutdown
-```
-
----
-*Parent Task 4.0 complete. Ready to merge to main and begin Task 5.0 - n8n integration.*
+## Technical Context
+- **Tech Stack**: Node.js, TypeScript, Commander.js, LangGraph, n8n (IMMUTABLE - see tech-stack-definition.md)
+- **Architecture**: Functional programming, max 500 lines per file, CommonJS modules
+- **Testing**: Jest with comprehensive test coverage, tests required for all new code
