@@ -3,14 +3,18 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { loadConfig } from '../config';
+import { FileHandler } from '../services/file-handler';
+import { ProgressManager } from './progress-manager';
+import { CommandContext } from './types';
 
-// Try to load config (skip in test mode for help/version commands)
+// Try to load config (skip in test mode for help/version commands or no command)
 const isHelpOrVersion = process.argv.some(arg => 
   arg === '--help' || arg === '-h' || 
   arg === '--version' || arg === '-V'
 );
+const noCommand = process.argv.length === 2;
 
-if (!isHelpOrVersion) {
+if (!isHelpOrVersion && !noCommand) {
   try {
     const config = loadConfig();
     // Config will be used in actual command implementations
@@ -36,13 +40,20 @@ const logo = `
 program
   .name('ideaforge')
   .description('Transform your project ideas into actionable plans using MoSCoW and Kano frameworks')
-  .version('0.1.0')
+  .version('1.0.0')
   .configureHelp({
     sortSubcommands: true,
     subcommandTerm: (cmd) => cmd.name()
   });
 
-// Init command
+// Create shared context for all commands
+// @ts-ignore - Will be used when commands are implemented in subtasks 3.2-3.5
+const context: CommandContext = {
+  fileHandler: new FileHandler(),
+  progressManager: new ProgressManager()
+};
+
+// Init command (keeping as stub for now)
 program
   .command('init')
   .description('Create a new IdeaForge template file in the current directory')
@@ -51,34 +62,28 @@ program
     console.log(chalk.gray('This will create ideaforge-template.org in the current directory'));
   });
 
-// Analyze command
+// Analyze command (keeping as stub for now)
 program
   .command('analyze <file>')
   .description('Analyze your project ideas and requirements')
-  .option('-o, --output <file>', 'output file path (default: analysis-v1.org)')
-  .option('--verbose', 'show detailed progress information')
-  .option('--quiet', 'suppress all progress messages (errors only)')
-  .option('--no-emoji', 'use plain text progress messages without emojis')
+  .option('-o, --output <file>', 'output file path (default: ideaforge-results.org)')
   .action((file, options) => {
     console.log(chalk.yellow('⚠️  analyze command not yet implemented'));
     console.log(chalk.gray(`Would analyze: ${file}`));
     if (options.output) console.log(chalk.gray(`Output to: ${options.output}`));
   });
 
-// Refine command
+// Refine command (keeping as stub for now)
 program
   .command('refine <file>')
   .description('Refine your analysis with feedback and edits')
   .option('-o, --output <file>', 'output file path (default: incremented version)')
-  .option('--verbose', 'show detailed progress information')
-  .option('--quiet', 'suppress all progress messages (errors only)')
-  .option('--no-emoji', 'use plain text progress messages without emojis')
   .action((file, _options) => {
     console.log(chalk.yellow('⚠️  refine command not yet implemented'));
     console.log(chalk.gray(`Would refine: ${file}`));
   });
 
-// Flow command
+// Flow command (keeping as stub for now)
 program
   .command('flow <file>')
   .description('Generate architecture flow diagram from analysis')
@@ -89,7 +94,7 @@ program
     console.log(chalk.gray(`Would generate ${options.format} diagram from: ${file}`));
   });
 
-// Tables command
+// Tables command (keeping as stub for now)
 program
   .command('tables <file>')
   .description('Extract MoSCoW/Kano tables from analysis file')
@@ -99,7 +104,7 @@ program
     console.log(chalk.gray(`Would extract tables from: ${file}`));
   });
 
-// Export command
+// Export command (keeping as stub for now)
 program
   .command('export <file>')
   .description('Export your final plan to different formats')
@@ -119,10 +124,10 @@ program.on('--help', () => {
   console.log('  $ ideaforge init');
   console.log('');
   console.log(chalk.gray('  # Analyze your project ideas'));
-  console.log('  $ ideaforge analyze my-project.org --output analysis-v1.org');
+  console.log('  $ ideaforge analyze my-project.org --output analysis.org');
   console.log('');
   console.log(chalk.gray('  # Refine with feedback (add :RESPONSE: tags in the file first)'));
-  console.log('  $ ideaforge refine analysis-v1.org --output analysis-v2.org');
+  console.log('  $ ideaforge refine analysis.org --output analysis-v2.org');
   console.log('');
   console.log(chalk.gray('  # Generate architecture flow diagram'));
   console.log('  $ ideaforge flow analysis-final.org --format svg --output architecture.svg');
@@ -149,4 +154,3 @@ if (process.argv.length === 2) {
   // Parse arguments normally
   program.parse(process.argv);
 }
-// Test comment

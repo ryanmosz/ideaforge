@@ -6,8 +6,9 @@ IdeaForge is a CLI tool for transforming project ideas into actionable plans usi
 ## Current State
 - **Branch**: `feature/task-3.0-cli-framework`
 - **Parent Task**: 3.0 - Build CLI Framework and Command Structure
-- **Status**: NOT STARTED
+- **Status**: IN PROGRESS - Subtasks 3.6 and 3.1 Complete
 - **Prerequisites**: ✅ Parent Tasks 1.0 and 2.0 COMPLETE
+- **Tests**: ✅ All 216 tests passing
 
 ## What's Been Built So Far
 
@@ -29,7 +30,29 @@ IdeaForge is a CLI tool for transforming project ideas into actionable plans usi
 - 126 tests for parsing functionality
 - **Total: 199 tests passing**
 
-## Parent Task 3.0: Build CLI Framework
+## Parent Task 3.0: Build CLI Framework (IN PROGRESS)
+
+### Completed Subtasks
+- ✅ **3.6** Implement progress messaging system
+  - Created simplified `ProgressManager` class with default mode only
+  - Uses Ora for spinner animations with emoji support
+  - Created comprehensive test suite (17 tests)
+  - Set up ESM module mocking for ora and chalk
+
+- ✅ **3.1** Implement main CLI entry point with Commander.js
+  - Updated CLI to version 1.0.0
+  - Removed verbose/quiet/no-emoji options per requirements
+  - Created `BaseCommand` abstract class for all commands
+  - Set up `CommandContext` with FileHandler and ProgressManager
+  - Fixed config loading to skip when showing help/version/no command
+  - All command stubs remain functional
+
+### Development Plan
+- **Implementation Order**: ✅ 3.6 → ✅ 3.1 → 3.2 → 3.4 → 3.3 → 3.5
+- **Approach**: Phased implementation with incremental testing
+  - Phase 1: Foundation (✅ 3.6 + ✅ 3.1) - Progress system and CLI structure
+  - Phase 2: Core Commands (3.2 + 3.4) - Analyze and Export
+  - Phase 3: Advanced Features (3.3 + 3.5) - Refine and Visualization
 
 ### What This Task Will Do
 Connect the parsing system to the CLI commands to create a working tool:
@@ -39,14 +62,6 @@ Connect the parsing system to the CLI commands to create a working tool:
 4. Add progress indicators using ora
 5. Handle file paths and validation
 6. Create user-friendly error messages
-
-### Subtasks from technical-implementation-plan.md
-- 3.1 Implement main CLI entry point with Commander.js
-- 3.2 Create analyze command for initial processing
-- 3.3 Create refine command for iterative improvements
-- 3.4 Create export command with format options
-- 3.5 Create visualization commands for diagrams and tables
-- 3.6 Implement progress messaging system
 
 ### Key Integration Points
 - CLI entry point exists at `src/cli/index.ts`
@@ -76,6 +91,19 @@ User Output ← FileHandler.writeDocument() ← Format Generator ← Processed D
 4. **DataExtractor** (`src/parsers/data-extractor.ts`)
    - `extractData(document)` - Returns structured data
 
+5. **ProgressManager** (`src/cli/progress-manager.ts`) ✅ NEW
+   - `start(message)` - Start spinner with message
+   - `update(message)` - Update spinner text
+   - `succeed(message)` - Mark as successful
+   - `fail(message)` - Mark as failed
+   - `warn(message)` - Show warning
+   - `stop()` - Stop spinner
+
+6. **BaseCommand** (`src/cli/commands/base-command.ts`) ✅ NEW
+   - Abstract class for all CLI commands
+   - Provides `createProgress()` and `handleError()` methods
+   - Manages shared context (FileHandler, ProgressManager)
+
 ## Development Guidelines
 
 ### Testing Requirements
@@ -95,10 +123,9 @@ User Output ← FileHandler.writeDocument() ← Format Generator ← Processed D
 
 ## Next Immediate Steps
 
-1. Start with creating the plan for Parent Task 3.0 using `plan-parent.md`
-2. Begin with subtask 3.1 - enhance the CLI entry point
-3. Connect FileHandler to the analyze command (3.2)
-4. Test with the existing `ideaforge-template.org`
+1. ✅ Subtask 3.6 - Progress messaging system complete
+2. ✅ Subtask 3.1 - Enhanced CLI entry point complete
+3. Ready to implement subtask 3.2 - Create analyze command
 
 ## Environment Setup
 ```bash
@@ -111,17 +138,20 @@ npm run build
 ./bin/ideaforge -h
 ```
 
-## Testing the Parser (Manual Test)
-```typescript
-import { FileHandler } from './src/services/file-handler';
+## Testing the CLI
+```bash
+# Show help
+./bin/ideaforge --help
 
-const handler = new FileHandler();
-const data = handler.readOrgFile('./ideaforge-template.org');
-console.log(data);
+# Show version (1.0.0)
+./bin/ideaforge --version
 
-// Export to cursor format
-handler.writeDocument(data, './output.md', 'cursor');
+# Show logo and help
+./bin/ideaforge
+
+# Commands still show stubs for now
+NODE_ENV=test ./bin/ideaforge init
 ```
 
 ---
-*Ready to implement the CLI commands that will make IdeaForge a complete, working tool.*
+*Subtasks 3.6 and 3.1 complete. Ready to proceed with subtask 3.2 - Create analyze command.*
