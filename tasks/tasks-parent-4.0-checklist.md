@@ -39,7 +39,7 @@
   - [x] 4.3.4 KanoEvaluationNode - Assess user value
   - [x] 4.3.5 DependencyAnalysisNode - Map feature relationships
 - [ ] 4.4 Create research nodes:
-  - [ ] 4.4.1 TechnologyExtractionNode - Parse for tech keywords
+  - [x] 4.4.1 TechnologyExtractionNode - Parse for tech keywords
   - [ ] 4.4.2 HackerNewsSearchNode - Query HN discussions
   - [ ] 4.4.3 RedditSearchNode - Search relevant subreddits
   - [ ] 4.4.4 AdditionalResearchNode - Process user topics
