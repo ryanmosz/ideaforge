@@ -9,6 +9,7 @@ describe('ProjectState Schema', () => {
       // Check key fields exist
       expect(stateKeys).toContain('filePath');
       expect(stateKeys).toContain('fileContent');
+      expect(stateKeys).toContain('sessionId');
       expect(stateKeys).toContain('requirements');
       expect(stateKeys).toContain('moscowAnalysis');
       expect(stateKeys).toContain('currentNode');
@@ -17,13 +18,14 @@ describe('ProjectState Schema', () => {
     
     it('should have correct number of state channels', () => {
       const stateKeys = Object.keys(stateChannels);
-      expect(stateKeys.length).toBe(26);
+      expect(stateKeys.length).toBe(27);
     });
   });
   
   describe('Channel Defaults', () => {
     it('should provide correct default values', () => {
       expect(stateChannels.filePath.default()).toBe('');
+      expect(stateChannels.sessionId.default()).toBeUndefined();
       expect(stateChannels.requirements.default()).toEqual([]);
       expect(stateChannels.moscowAnalysis.default()).toEqual({
         must: [],
@@ -41,6 +43,14 @@ describe('ProjectState Schema', () => {
       const { filePath } = stateChannels;
       expect(filePath.value('old', 'new')).toBe('new');
       expect(filePath.value('old', undefined)).toBe('old');
+    });
+    
+    it('should handle optional string updates correctly', () => {
+      const { sessionId } = stateChannels;
+      expect(sessionId.value('old-session', 'new-session')).toBe('new-session');
+      expect(sessionId.value('old-session', undefined)).toBe('old-session');
+      expect(sessionId.value(undefined, 'new-session')).toBe('new-session');
+      expect(sessionId.value(undefined, undefined)).toBeUndefined();
     });
     
     it('should handle array replacement correctly', () => {
