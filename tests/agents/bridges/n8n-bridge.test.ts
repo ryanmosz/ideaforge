@@ -13,6 +13,9 @@ describe('N8nBridge', () => {
   let mockClient: jest.Mocked<N8nClient>;
   let mockTransformer: jest.Mocked<ResponseTransformer>;
   
+  // Track all bridges created during tests for cleanup
+  const createdBridges: N8nBridge[] = [];
+  
   const mockState: ProjectState = {
     filePath: 'test.org',
     fileContent: '',
@@ -70,17 +73,23 @@ describe('N8nBridge', () => {
     bridge = new N8nBridge({
       client: mockClient,
       transformer: mockTransformer,
+      enableSessionAutoCleanup: false, // Disable timer in tests
     });
+    createdBridges.push(bridge);
   });
   
   afterEach(() => {
-    // Clean up the session tracker timer to prevent Jest hanging
-    bridge.cleanup();
+    // Clean up ALL created bridges to prevent Jest hanging
+    createdBridges.forEach(b => b.cleanup());
+    createdBridges.length = 0; // Clear the array
   });
   
   describe('constructor', () => {
     it('should create bridge with default configuration', () => {
-      const defaultBridge = new N8nBridge();
+      const defaultBridge = new N8nBridge({
+        enableSessionAutoCleanup: false, // Disable timer in tests
+      });
+      createdBridges.push(defaultBridge); // Track for cleanup
       expect(defaultBridge).toBeDefined();
       expect(defaultBridge.getClient()).toBeDefined();
       expect(defaultBridge.getTransformer()).toBeDefined();
@@ -91,8 +100,10 @@ describe('N8nBridge', () => {
         client: mockClient,
         transformer: mockTransformer,
         cacheResults: false,
-        maxResultsPerSource: 5
+        maxResultsPerSource: 5,
+        enableSessionAutoCleanup: false, // Disable timer in tests
       });
+      createdBridges.push(customBridge); // Track for cleanup
       
       expect(customBridge.getClient()).toBe(mockClient);
       expect(customBridge.getTransformer()).toBe(mockTransformer);
@@ -222,7 +233,9 @@ describe('N8nBridge', () => {
       const limitedBridge = new N8nBridge({
         client: mockClient,
         maxResultsPerSource: 5,
+        enableSessionAutoCleanup: false, // Disable timer in tests
       });
+      createdBridges.push(limitedBridge); // Track for cleanup
       
       const result = await limitedBridge.researchTechnology('typescript', mockState);
       
@@ -256,7 +269,9 @@ describe('N8nBridge', () => {
         client: mockClient,
         maxConcurrentRequests: 2,
         batchDelay: 10, // Short delay for testing
+        enableSessionAutoCleanup: false, // Disable timer in tests
       });
+      createdBridges.push(batchBridge); // Track for cleanup
       
       const results = await batchBridge.researchMultipleTechnologies(technologies, mockState);
       
@@ -310,7 +325,9 @@ describe('N8nBridge', () => {
         client: mockClient,
         maxConcurrentRequests: 2,
         batchDelay: 1000,
+        enableSessionAutoCleanup: false, // Disable timer in tests
       });
+      createdBridges.push(batchBridge); // Track for cleanup
       
       // Start the research
       const promise = batchBridge.researchMultipleTechnologies(technologies, mockState);
@@ -326,8 +343,7 @@ describe('N8nBridge', () => {
       expect(mockClient.searchHackerNewsTransformed).toHaveBeenCalledTimes(3);
       expect(mockClient.searchRedditTransformed).toHaveBeenCalledTimes(3);
       
-      // Clean up
-      batchBridge.cleanup();
+      // Cleanup happens in afterEach now
       jest.useRealTimers();
     });
   });
@@ -617,8 +633,10 @@ describe('N8nBridge', () => {
       // Create a bridge with a longer session timeout to prevent cleanup
       const sessionBridge = new N8nBridge({
         client: mockClient,
-        sessionTrackerMaxAge: 600000 // 10 minutes
+        sessionTrackerMaxAge: 600000, // 10 minutes
+        enableSessionAutoCleanup: false, // Disable timer in tests
       });
+      createdBridges.push(sessionBridge); // Track for cleanup
       
       mockClient.searchHackerNewsTransformed.mockRejectedValue(new Error('API Error'));
       mockClient.searchRedditTransformed.mockRejectedValue(new Error('API Error'));

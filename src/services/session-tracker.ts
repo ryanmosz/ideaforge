@@ -36,9 +36,14 @@ export class SessionTracker {
   private readonly maxSessionAge: number;
   private cleanupInterval: NodeJS.Timeout | null = null;
   
-  constructor(maxSessionAgeMs: number = 24 * 60 * 60 * 1000) { // 24 hours default
+  constructor(
+    maxSessionAgeMs: number = 24 * 60 * 60 * 1000, // 24 hours default
+    enableAutoCleanup: boolean = true
+  ) {
     this.maxSessionAge = maxSessionAgeMs;
-    this.startCleanupTimer();
+    if (enableAutoCleanup) {
+      this.startCleanupTimer();
+    }
   }
   
   /**

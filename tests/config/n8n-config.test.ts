@@ -17,6 +17,9 @@ describe('n8n-config', () => {
   describe('getN8nConfig', () => {
     it('should return config with default values', () => {
       process.env.N8N_API_KEY = 'test-key';
+      // Clear any test environment overrides
+      delete process.env.N8N_TIMEOUT;
+      delete process.env.N8N_RETRIES;
       
       const config = getN8nConfig();
       

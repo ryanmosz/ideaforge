@@ -19,6 +19,15 @@ export class N8nErrorHandler {
    * Convert any error into a standardized N8nError
    */
   normalizeError(error: any): N8nError {
+    // Handle null/undefined
+    if (!error) {
+      return new N8nError(
+        'Unknown error occurred',
+        'UNKNOWN_ERROR',
+        { originalError: error }
+      );
+    }
+    
     // Already an N8nError
     if (error instanceof N8nError) {
       return error;
@@ -238,7 +247,7 @@ export class N8nErrorHandler {
    * Type guard for Axios errors
    */
   private isAxiosError(error: any): error is AxiosError {
-    return error.isAxiosError === true;
+    return error && error.isAxiosError === true;
   }
   
   /**

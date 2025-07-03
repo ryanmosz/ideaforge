@@ -14,6 +14,7 @@ export interface N8nBridgeConfig {
   maxConcurrentRequests?: number;
   batchDelay?: number;
   sessionTrackerMaxAge?: number;
+  enableSessionAutoCleanup?: boolean; // For disabling cleanup timer in tests
   circuitBreakerConfig?: {
     failureThreshold?: number;
     resetTimeout?: number;
@@ -42,6 +43,7 @@ export class N8nBridge {
       maxConcurrentRequests: config?.maxConcurrentRequests || 5,
       batchDelay: config?.batchDelay || 1000, // 1 second between batches
       sessionTrackerMaxAge: config?.sessionTrackerMaxAge || 300000, // 5 minutes
+      enableSessionAutoCleanup: config?.enableSessionAutoCleanup ?? true, // Default to true for production
       circuitBreakerConfig: {
         failureThreshold: config?.circuitBreakerConfig?.failureThreshold || 5,
         resetTimeout: config?.circuitBreakerConfig?.resetTimeout || 30000,
@@ -51,7 +53,10 @@ export class N8nBridge {
     
     this.client = this.config.client;
     this.transformer = this.config.transformer;
-    this.sessionTracker = new SessionTracker(this.config.sessionTrackerMaxAge);
+    this.sessionTracker = new SessionTracker(
+      this.config.sessionTrackerMaxAge,
+      this.config.enableSessionAutoCleanup
+    );
     this.errorHandler = new N8nErrorHandler();
     this.circuitBreakerManager = new CircuitBreakerManager();
   }
