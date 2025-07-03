@@ -1,16 +1,17 @@
 ## Relevant Files
 
 - `src/services/n8n-client.ts` - Main n8n webhook client implementation
-- `src/services/n8n-client.test.ts` - Unit tests for n8n client
+- `tests/services/n8n-client.test.ts` - Unit tests for n8n client
 - `src/types/n8n-types.ts` - TypeScript interfaces for n8n communication
-- `src/types/hn-types.ts` - Hacker News API response types
-- `src/types/reddit-types.ts` - Reddit API response types
-- `src/services/cache-manager.ts` - Response caching implementation
-- `src/services/cache-manager.test.ts` - Cache manager tests
-- `src/utils/rate-limiter.ts` - Rate limiting utility
-- `src/utils/rate-limiter.test.ts` - Rate limiter tests
+- `src/agents/types/research-types.ts` - Research result types for agents
+- `src/services/response-transformer.ts` - n8n response transformation service
+- `tests/services/response-transformer.test.ts` - Response transformer tests
+- `src/utils/retry-handler.ts` - Retry logic with exponential backoff
+- `tests/utils/retry-handler.test.ts` - Retry handler tests
+- `src/services/cache-manager.ts` - Response caching implementation (TODO)
+- `src/utils/rate-limiter.ts` - Rate limiting utility (TODO)
 - `src/agents/bridges/n8n-bridge.ts` - LangGraph to n8n communication bridge
-- `src/agents/bridges/n8n-bridge.test.ts` - Bridge unit tests
+- `tests/agents/bridges/n8n-bridge.test.ts` - Bridge unit tests
 - `n8n-workflows/hackernews-search.json` - n8n workflow for HN integration
 - `n8n-workflows/reddit-search.json` - n8n workflow for Reddit integration
 - `docs/n8n-setup.md` - n8n deployment and configuration guide
@@ -39,7 +40,7 @@
   - [x] 5.2.2 Implement webhook request methods
   - [x] 5.2.3 Add timeout and retry logic
   - [x] 5.2.4 Create response transformation layer
-  - [ ] 5.2.5 Build LangGraph bridge interface
+  - [x] 5.2.5 Build LangGraph bridge interface
   - [ ] 5.2.6 Implement session correlation
   - [ ] 5.2.7 Add error handling and fallbacks
   - [ ] 5.2.8 Write comprehensive unit tests
