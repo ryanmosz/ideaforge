@@ -2,13 +2,19 @@ import { Command } from 'commander';
 import { BaseCommand } from './base-command';
 import { VersionHelper } from '../../utils/version-helper';
 import * as path from 'path';
+import { AIModel, AI_MODELS } from '../../config';
 
 export class RefineCommand extends BaseCommand {
   register(program: Command): void {
     program
       .command('refine <file>')
-      .description('Refine project plan based on :RESPONSE: feedback tags')
-      .option('-o, --output <path>', 'output file path (auto-versioned by default)')
+      .description('Process user responses and refine the project analysis')
+      .option('-o, --output <path>', 'output file path (defaults to input filename with version)')
+      .option(
+        '-m, --model <model>',
+        `AI model to use (${Object.keys(AI_MODELS).join(', ')})`,
+        'o3-mini'
+      )
       .action(async (file: string, options: any) => {
         await this.execute(file, options);
       });
@@ -18,6 +24,17 @@ export class RefineCommand extends BaseCommand {
     const progress = this.createProgress();
     
     try {
+      // Validate and set AI model
+      if (options.model && !AI_MODELS[options.model as AIModel]) {
+        throw new Error(`Invalid model: ${options.model}. Valid options are: ${Object.keys(AI_MODELS).join(', ')}`);
+      }
+      
+      // Set the model in environment for this execution
+      if (options.model) {
+        process.env.AI_MODEL = options.model;
+      }
+      
+      // Start progress
       progress.start('📄 Reading org-mode file with responses...');
       const data = await this.fileHandler.readOrgFile(file);
       

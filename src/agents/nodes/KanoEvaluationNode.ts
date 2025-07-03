@@ -2,6 +2,7 @@ import { ProjectState } from '../state';
 import { Requirement } from '../types';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { createLLM } from '../utils/llm-factory';
 
 /**
  * KanoEvaluationNode - Evaluates requirements using the Kano model
@@ -11,11 +12,7 @@ export class KanoEvaluationNode {
   private llm: ChatOpenAI;
   
   constructor() {
-    this.llm = new ChatOpenAI({
-      modelName: 'o3-mini',
-      temperature: 0.2, // Slightly higher for creative evaluation
-      maxTokens: 2000
-    });
+    this.llm = createLLM(0.2, 2000); // Slightly higher for creative evaluation
   }
   
   /**

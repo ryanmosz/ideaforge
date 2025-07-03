@@ -2,6 +2,7 @@ import { ProjectState } from '../state';
 import { Requirement } from '../types';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { createLLM } from '../utils/llm-factory';
 
 /**
  * RequirementsAnalysisNode - Analyzes requirements to understand project goals
@@ -11,11 +12,7 @@ export class RequirementsAnalysisNode {
   private llm: ChatOpenAI;
   
   constructor() {
-    this.llm = new ChatOpenAI({
-      modelName: 'o3-mini',
-      temperature: 0.2,
-      maxTokens: 2000
-    });
+    this.llm = createLLM(0.2, 2000);
   }
   
   /**

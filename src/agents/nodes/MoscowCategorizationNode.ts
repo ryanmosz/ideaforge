@@ -2,6 +2,7 @@ import { ProjectState } from '../state';
 import { Requirement } from '../types';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { createLLM } from '../utils/llm-factory';
 
 /**
  * MoscowCategorizationNode - Applies MoSCoW framework to categorize requirements
@@ -11,11 +12,7 @@ export class MoscowCategorizationNode {
   private llm: ChatOpenAI;
   
   constructor() {
-    this.llm = new ChatOpenAI({
-      modelName: 'o3-mini',
-      temperature: 0.1, // Lower temperature for more consistent categorization
-      maxTokens: 2000
-    });
+    this.llm = createLLM(0.1, 2000); // Lower temperature for more consistent categorization
   }
   
   /**

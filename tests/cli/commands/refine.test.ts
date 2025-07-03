@@ -44,7 +44,7 @@ describe('RefineCommand', () => {
     command.register(program);
     const refineCmd = program.commands.find(cmd => cmd.name() === 'refine');
     expect(refineCmd).toBeDefined();
-    expect(refineCmd?.description()).toContain('Refine project plan based on :RESPONSE: feedback tags');
+    expect(refineCmd?.description()).toContain('Process user responses and refine the project analysis');
   });
 
   describe('execute', () => {
