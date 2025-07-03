@@ -1,10 +1,15 @@
 import { RetryHandler, DEFAULT_RETRY_CONFIG } from '../../src/utils/retry-handler';
+import { N8nErrorHandler } from '../../src/services/n8n-error-handler';
+
+// Mock the N8nErrorHandler module
+jest.mock('../../src/services/n8n-error-handler');
 
 // Mock console methods
 const originalConsoleLog = console.log;
 
 describe('RetryHandler', () => {
   let handler: RetryHandler;
+  let mockErrorHandler: jest.Mocked<N8nErrorHandler>;
   
   beforeEach(() => {
     // Mock console.log
@@ -12,6 +17,19 @@ describe('RetryHandler', () => {
     
     // Use fake timers for testing delays
     jest.useFakeTimers();
+    
+    // Setup mock error handler
+    mockErrorHandler = {
+      isRetryableError: jest.fn(),
+      getRetryDelay: jest.fn(),
+      logError: jest.fn(),
+      normalizeError: jest.fn(),
+      createErrorResponse: jest.fn(),
+      createFallbackResponse: jest.fn()
+    } as any;
+    
+    // Mock the constructor
+    (N8nErrorHandler as jest.MockedClass<typeof N8nErrorHandler>).mockImplementation(() => mockErrorHandler);
     
     // Create default handler
     handler = new RetryHandler();
@@ -61,6 +79,10 @@ describe('RetryHandler', () => {
         .mockRejectedValueOnce(error)
         .mockResolvedValueOnce('success');
       
+      // Mock error handler behavior
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
+      mockErrorHandler.getRetryDelay.mockReturnValue(1000);
+      
       const promise = handler.execute(operation, 'test operation');
       
       // Fast-forward through the retry delay
@@ -70,8 +92,7 @@ describe('RetryHandler', () => {
       
       expect(result).toBe('success');
       expect(operation).toHaveBeenCalledTimes(2);
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[Retry] test operation - Failed with error'));
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[Retry] test operation - Attempt 2/4'));
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[Retry] test operation - Attempt 1/4 failed. Retrying in'));
     });
     
     it('should throw immediately on non-retryable error', async () => {
@@ -79,9 +100,12 @@ describe('RetryHandler', () => {
       error.response = { status: 400 };
       const operation = jest.fn().mockRejectedValue(error);
       
+      // Mock error handler behavior - not retryable
+      mockErrorHandler.isRetryableError.mockReturnValue(false);
+      
       await expect(handler.execute(operation, 'test operation')).rejects.toThrow('Bad request');
       expect(operation).toHaveBeenCalledTimes(1);
-      expect(console.log).not.toHaveBeenCalled();
+      expect(mockErrorHandler.logError).toHaveBeenCalledWith(error, 'test operation');
     });
     
     it('should exhaust retries and throw', async () => {
@@ -99,8 +123,13 @@ describe('RetryHandler', () => {
       error.response = { status: 500 };
       const operation = jest.fn().mockRejectedValue(error);
       
+      // Mock error handler behavior - always retryable
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
+      mockErrorHandler.getRetryDelay.mockReturnValue(10);
+      
       await expect(fastHandler.execute(operation, 'test operation')).rejects.toThrow('Server error');
       expect(operation).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+      expect(mockErrorHandler.logError).toHaveBeenCalledWith(error, 'test operation');
       
       jest.useFakeTimers(); // Restore fake timers
     });
@@ -112,6 +141,10 @@ describe('RetryHandler', () => {
       const operation = jest.fn()
         .mockRejectedValueOnce(timeoutError)
         .mockResolvedValueOnce('success');
+      
+      // Mock error handler behavior
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
+      mockErrorHandler.getRetryDelay.mockReturnValue(1000);
       
       const promise = handler.execute(operation, 'test operation');
       
@@ -131,6 +164,10 @@ describe('RetryHandler', () => {
       const operation = jest.fn()
         .mockRejectedValueOnce(rateLimitError)
         .mockResolvedValueOnce('success');
+      
+      // Mock error handler behavior - rate limit with delay
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
+      mockErrorHandler.getRetryDelay.mockReturnValue(5000); // Rate limit delay
       
       const promise = handler.execute(operation, 'test operation');
       
@@ -153,13 +190,16 @@ describe('RetryHandler', () => {
         backoffMultiplier: 2 
       });
       
+      // Mock error handler to return a base delay
+      mockErrorHandler.getRetryDelay.mockReturnValue(0); // Let retry handler calculate
+      
       // Access private method through any type casting for testing
       const calculateDelay = (testHandler as any).calculateDelay.bind(testHandler);
       
       // Test exponential growth
-      const delay0 = calculateDelay(0);
-      const delay1 = calculateDelay(1);
-      const delay2 = calculateDelay(2);
+      const delay0 = calculateDelay(0, new Error());
+      const delay1 = calculateDelay(1, new Error());
+      const delay2 = calculateDelay(2, new Error());
       
       // With jitter, delays should be approximately:
       // Attempt 0: 1000 * (0.5 to 1.5) = 500 to 1500
@@ -184,10 +224,13 @@ describe('RetryHandler', () => {
         backoffMultiplier: 10 
       });
       
+      // Mock error handler to return a base delay
+      mockErrorHandler.getRetryDelay.mockReturnValue(0); // Let retry handler calculate
+      
       const calculateDelay = (testHandler as any).calculateDelay.bind(testHandler);
       
       // Attempt 3 would be 1000 * 10^3 = 1,000,000 without cap
-      const delay = calculateDelay(3);
+      const delay = calculateDelay(3, new Error());
       
       // Should be capped at maxDelay
       expect(delay).toBeLessThanOrEqual(5000);
@@ -201,14 +244,17 @@ describe('RetryHandler', () => {
       // Test various retryable errors
       const econnrefused: any = new Error();
       econnrefused.code = 'ECONNREFUSED';
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
       expect(shouldRetry(econnrefused, 0)).toBe(true);
       
       const timeout: any = new Error();
       timeout.code = 'ETIMEDOUT';
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
       expect(shouldRetry(timeout, 0)).toBe(true);
       
       const serverError: any = new Error();
       serverError.response = { status: 503 };
+      mockErrorHandler.isRetryableError.mockReturnValue(true);
       expect(shouldRetry(serverError, 0)).toBe(true);
     });
     
@@ -217,14 +263,17 @@ describe('RetryHandler', () => {
       
       const badRequest: any = new Error();
       badRequest.response = { status: 400 };
+      mockErrorHandler.isRetryableError.mockReturnValue(false);
       expect(shouldRetry(badRequest, 0)).toBe(false);
       
       const unauthorized: any = new Error();
       unauthorized.response = { status: 401 };
+      mockErrorHandler.isRetryableError.mockReturnValue(false);
       expect(shouldRetry(unauthorized, 0)).toBe(false);
       
       const notFound: any = new Error();
       notFound.response = { status: 404 };
+      mockErrorHandler.isRetryableError.mockReturnValue(false);
       expect(shouldRetry(notFound, 0)).toBe(false);
     });
     
@@ -233,6 +282,7 @@ describe('RetryHandler', () => {
       
       const error: any = new Error();
       error.code = 'ECONNREFUSED'; // Normally retryable
+      mockErrorHandler.isRetryableError.mockReturnValue(true); // Would be retryable
       
       // At max retries (3), should not retry
       expect(shouldRetry(error, 3)).toBe(false);
