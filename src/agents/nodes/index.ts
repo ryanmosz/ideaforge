@@ -2,4 +2,5 @@
 export { DocumentParserNode } from './DocumentParserNode';
 export { RequirementsAnalysisNode } from './RequirementsAnalysisNode';
 export { MoscowCategorizationNode } from './MoscowCategorizationNode';
-export { KanoEvaluationNode } from './KanoEvaluationNode'; 
+export { KanoEvaluationNode } from './KanoEvaluationNode';
+export { DependencyAnalysisNode } from './DependencyAnalysisNode'; 
