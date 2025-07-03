@@ -6,9 +6,9 @@ IdeaForge is a CLI tool for transforming project ideas into actionable plans usi
 ## Current State
 - **Branch**: `feature/task-3.0-cli-framework`
 - **Parent Task**: 3.0 - Build CLI Framework and Command Structure
-- **Status**: IN PROGRESS - Subtasks 3.6 and 3.1 Complete
+- **Status**: ✅ COMPLETE - All subtasks implemented
 - **Prerequisites**: ✅ Parent Tasks 1.0 and 2.0 COMPLETE
-- **Tests**: ✅ All 216 tests passing
+- **Tests**: ✅ All 254 tests passing
 
 ## What's Been Built So Far
 
@@ -28,130 +28,142 @@ IdeaForge is a CLI tool for transforming project ideas into actionable plans usi
 - Export to org-mode and cursor markdown formats
 - Comprehensive error handling
 - 126 tests for parsing functionality
-- **Total: 199 tests passing**
 
-## Parent Task 3.0: Build CLI Framework (IN PROGRESS)
-
-### Completed Subtasks
-- ✅ **3.6** Implement progress messaging system
-  - Created simplified `ProgressManager` class with default mode only
-  - Uses Ora for spinner animations with emoji support
-  - Created comprehensive test suite (17 tests)
-  - Set up ESM module mocking for ora and chalk
-
-- ✅ **3.1** Implement main CLI entry point with Commander.js
-  - Updated CLI to version 1.0.0
-  - Removed verbose/quiet/no-emoji options per requirements
-  - Created `BaseCommand` abstract class for all commands
-  - Set up `CommandContext` with FileHandler and ProgressManager
-  - Fixed config loading to skip when showing help/version/no command
-  - All command stubs remain functional
-
-### Development Plan
-- **Implementation Order**: ✅ 3.6 → ✅ 3.1 → 3.2 → 3.4 → 3.3 → 3.5
-- **Approach**: Phased implementation with incremental testing
-  - Phase 1: Foundation (✅ 3.6 + ✅ 3.1) - Progress system and CLI structure
-  - Phase 2: Core Commands (3.2 + 3.4) - Analyze and Export
-  - Phase 3: Advanced Features (3.3 + 3.5) - Refine and Visualization
-
-### What This Task Will Do
-Connect the parsing system to the CLI commands to create a working tool:
-1. Wire up `ideaforge analyze` to use the parser
-2. Implement `ideaforge refine` for iterative improvements
-3. Create `ideaforge export` with format selection
-4. Add progress indicators using ora
-5. Handle file paths and validation
-6. Create user-friendly error messages
-
-### Key Integration Points
-- CLI entry point exists at `src/cli/index.ts`
-- FileHandler at `src/services/file-handler.ts` handles all file I/O
-- Parser/validator/extractor chain processes org-mode files
-- Export supports 'orgmode' and 'cursor' formats
+### Parent Task 3.0: Build CLI Framework ✅ COMPLETE
+- **3.6**: Enhanced ProgressManager with verbose output by default (timestamps, elapsed time)
+- **3.1**: Main CLI entry point with BaseCommand pattern
+- **3.2**: Analyze command - processes org-mode files and extracts data
+- **3.4**: Export command - converts between cursor and orgmode formats
+- **3.3**: Refine command - processes :RESPONSE: tags with auto-versioning
+- **3.5**: Visualize command stubs - placeholders for future features
+- **Total**: 254 tests passing (55 new tests added)
 
 ## Architecture Overview
 
 ```
-User Input → CLI Command → FileHandler.readOrgFile() → Parser → Validator → DataExtractor
-                                                                                    ↓
-User Output ← FileHandler.writeDocument() ← Format Generator ← Processed Data ←────┘
+User → CLI Command → BaseCommand → FileHandler → Parser → Validator → DataExtractor
+                         ↓                                                      ↓
+                  ProgressManager                                      ProcessedData
+                         ↓                                                      ↓
+          Rich feedback with timestamps                               Export/Save Results
 ```
 
-### Key Classes Available
-1. **FileHandler** (`src/services/file-handler.ts`)
-   - `readOrgFile(path)` - Returns ParsedDocumentData
-   - `writeDocument(data, path, format)` - Writes org/cursor format
+### Key Components
 
-2. **OrgModeParser** (`src/parsers/orgmode-parser.ts`)
-   - `parse(content)` - Returns ParseResult with document
-
-3. **OrgModeValidator** (`src/parsers/orgmode-validator.ts`)
-   - `validate(document)` - Returns validation result with score
-
-4. **DataExtractor** (`src/parsers/data-extractor.ts`)
-   - `extractData(document)` - Returns structured data
-
-5. **ProgressManager** (`src/cli/progress-manager.ts`) ✅ NEW
-   - `start(message)` - Start spinner with message
-   - `update(message)` - Update spinner text
-   - `succeed(message)` - Mark as successful
-   - `fail(message)` - Mark as failed
-   - `warn(message)` - Show warning
-   - `stop()` - Stop spinner
-
-6. **BaseCommand** (`src/cli/commands/base-command.ts`) ✅ NEW
-   - Abstract class for all CLI commands
+1. **BaseCommand** (`src/cli/commands/base-command.ts`)
+   - Abstract base class for all commands
    - Provides `createProgress()` and `handleError()` methods
-   - Manages shared context (FileHandler, ProgressManager)
+   - Manages shared CommandContext
+
+2. **CommandContext** (`src/cli/types.ts`)
+   - Shared services: FileHandler, ProgressManager, ErrorHandler
+   - Passed to all command constructors
+
+3. **ProgressManager** (`src/cli/progress-manager.ts`)
+   - Verbose by default with timestamps and elapsed time
+   - Methods: start(), update(), succeed(), fail(), warn(), info(), stop()
+   - Uses ora for spinner animations
+
+4. **VersionHelper** (`src/utils/version-helper.ts`)
+   - Auto-versioning for refined files
+   - extractVersion() and generateVersionedPath()
+
+5. **Commands**:
+   - **AnalyzeCommand**: Processes org-mode files, extracts data
+   - **ExportCommand**: Converts between formats (cursor/orgmode)
+   - **RefineCommand**: Processes :RESPONSE: tags, auto-versions output
+   - **VisualizeCommand**: Stub for future flow/tables generation
+
+## Available CLI Commands
+
+```bash
+# Analyze org-mode file
+./bin/ideaforge analyze <file> [--output <path>]
+
+# Export to different formats
+./bin/ideaforge export <file> [--format cursor|orgmode] [--output <path>]
+
+# Refine with feedback (requires :RESPONSE: tags)
+./bin/ideaforge refine <file> [--output <path>]
+
+# Visualization stubs (v2.0 features)
+./bin/ideaforge visualize flow <file> [--format png|svg|ascii]
+./bin/ideaforge visualize tables <file> [--output <path>]
+```
+
+## Next Parent Task: 4.0 - Implement LangGraph Agent Architecture
+
+### What Task 4.0 Will Do
+- Create the AI intelligence layer using LangGraph
+- Build nodes for document analysis, MoSCoW/Kano evaluation
+- Implement research nodes for external data gathering
+- Create refinement nodes for processing :RESPONSE: tags
+- Set up graph edges and conditional routing
+- Integrate with existing CLI commands
+
+### Key Integration Points
+- Analyze command will use LangGraph for intelligent analysis
+- Refine command will process :RESPONSE: tags through LangGraph
+- Export command will include AI-generated insights
+- All AI processing will show progress via ProgressManager
+
+### Prerequisites for Task 4.0
+- ✅ CLI framework complete (Task 3.0)
+- ✅ Org-mode parsing infrastructure (Task 2.0)
+- ✅ File I/O and error handling (Tasks 1.0 & 2.0)
+- Need: OpenAI API key configured
+- Need: LangGraph/LangChain dependencies
 
 ## Development Guidelines
 
 ### Testing Requirements
-- Create tests BEFORE or ALONGSIDE implementation
-- Run `npm test` after each subtask
-- All tests must pass before moving to next task
-- Test file naming: `feature.ts` → `feature.test.ts`
+- All 254 tests currently passing
+- Test coverage maintained above 80%
+- New features require tests before implementation
 
 ### Git Workflow
-- Use `SUBTASK-COMMIT` for individual task commits
-- Use `PARENT-COMPLETE` when finishing Parent Task 3.0
-- Currently on branch `feature/task-3.0-cli-framework`
+- Current branch: `feature/task-3.0-cli-framework`
+- Ready to merge to main and create `feature/task-4.0-langgraph`
+- Use conventional commits (feat:, fix:, docs:, etc.)
 
 ### File Limits
-- Keep all files under 500 lines
-- Split large modules into logical components
-
-## Next Immediate Steps
-
-1. ✅ Subtask 3.6 - Progress messaging system complete
-2. ✅ Subtask 3.1 - Enhanced CLI entry point complete
-3. Ready to implement subtask 3.2 - Create analyze command
+- All files under 500 lines (enforced by ESLint)
+- Largest file: tests/cli/commands/refine.test.ts (220 lines)
 
 ## Environment Setup
 ```bash
-# Required environment variables
+# Required for full functionality
 OPENAI_API_KEY=your_key
-N8N_WEBHOOK_URL=your_webhook_url
+N8N_WEBHOOK_URL=your_webhook_url  # For Task 5.0
 
-# Test the current CLI
+# Test the CLI
 npm run build
-./bin/ideaforge -h
+./bin/ideaforge --help
+./bin/ideaforge analyze ideaforge-template.org
 ```
 
-## Testing the CLI
+## Testing the Current Implementation
 ```bash
-# Show help
-./bin/ideaforge --help
+# Run all tests
+npm test  # 254 tests pass
 
-# Show version (1.0.0)
-./bin/ideaforge --version
+# Build and test CLI
+npm run build
+./bin/ideaforge --version  # 1.0.0
 
-# Show logo and help
-./bin/ideaforge
+# Test analyze command
+./bin/ideaforge analyze ideaforge-template.org
 
-# Commands still show stubs for now
-NODE_ENV=test ./bin/ideaforge init
+# Test export command
+./bin/ideaforge export ideaforge-results.org --format cursor
+
+# Test refine (needs :RESPONSE: tags)
+./bin/ideaforge refine analysis.org  # Auto-versions to analysis-v2.org
+
+# Test visualization stubs
+./bin/ideaforge visualize flow diagram.org
+./bin/ideaforge visualize tables data.org
 ```
 
 ---
-*Subtasks 3.6 and 3.1 complete. Ready to proceed with subtask 3.2 - Create analyze command.*
+*Parent Task 3.0 complete. Ready to merge to main and begin Task 4.0 - LangGraph implementation.*
