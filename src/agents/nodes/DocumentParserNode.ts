@@ -49,12 +49,16 @@ export class DocumentParserNode {
       // Extract Q&A
       const questionsAnswers = this.extractQuestionsAnswers(parsedDoc);
       
+      // Extract research topics
+      const researchTopics = this.extractResearchTopics(parsedDoc);
+      
       // Return updated state
       return {
         requirements,
         userStories,
         brainstormIdeas,
         questionsAnswers,
+        researchTopics,
         currentNode: 'DocumentParserNode',
         nextNode: 'RequirementsAnalysisNode',
         errors: parseResult.errors ? parseResult.errors.map(e => `DocumentParserNode: ${e.message}`) : undefined
@@ -233,6 +237,34 @@ export class DocumentParserNode {
     }
     
     return qas;
+  }
+  
+  private extractResearchTopics(doc: OrgDocument): string[] {
+    const topics: string[] = [];
+    
+    // Find additional research subjects section
+    const researchSection = this.findSectionByHeading(doc.sections, 'Additional Research Subjects');
+    
+    if (researchSection && researchSection.content) {
+      // Extract topics from bullet points
+      const lines = researchSection.content.split('\n');
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Skip empty lines and template text
+        if (!trimmed || trimmed.toLowerCase().includes('list specific topics')) {
+          continue;
+        }
+        
+        // Remove bullet point markers
+        const topic = trimmed.replace(/^[-*]\s*/, '');
+        if (topic) {
+          topics.push(topic);
+        }
+      }
+    }
+    
+    return topics;
   }
   
   private findSectionByHeading(sections: OrgSection[], heading: string): OrgSection | undefined {

@@ -41,8 +41,8 @@
 - [ ] 4.4 Create research nodes:
   - [x] 4.4.1 TechnologyExtractionNode - Parse for tech keywords
   - [x] 4.4.2 HackerNewsSearchNode - Query HN discussions
-  - [ ] 4.4.3 RedditSearchNode - Search relevant subreddits
-  - [ ] 4.4.4 AdditionalResearchNode - Process user topics
+  - [x] 4.4.3 RedditSearchNode - Search relevant subreddits
+  - [x] 4.4.4 AdditionalResearchNode - Process user topics
   - [ ] 4.4.5 ResearchSynthesisNode - Combine findings
 - [ ] 4.5 Create refinement nodes:
   - [ ] 4.5.1 ResponseProcessingNode - Handle :RESPONSE: tags
