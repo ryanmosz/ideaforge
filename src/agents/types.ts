@@ -5,6 +5,8 @@ export interface Requirement {
   title: string;
   description: string;
   moscowCategory?: 'must' | 'should' | 'could' | 'wont';
+  kanoCategory?: 'basic' | 'performance' | 'excitement';
+  kanoRationale?: string;
 }
 
 export interface UserStory {
@@ -22,6 +24,7 @@ export interface BrainstormIdea {
 }
 
 export interface QuestionAnswer {
+  id: string;
   question: string;
   answer: string;
 } 

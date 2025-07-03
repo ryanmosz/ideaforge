@@ -55,6 +55,7 @@ describe('RequirementsAnalysisNode', () => {
       brainstormIdeas: [],
       questionsAnswers: [
         {
+          id: 'QA-1',
           question: 'What is the expected user base?',
           answer: '1000-5000 concurrent users'
         }

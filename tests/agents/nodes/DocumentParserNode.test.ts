@@ -172,6 +172,7 @@ Answer: OAuth2 with support for Google and GitHub`;
       
       expect(result.questionsAnswers).toHaveLength(3);
       expect(result.questionsAnswers![0]).toEqual({
+        id: 'QA-1',
         question: 'What is the target audience?',
         answer: 'Developers and project managers who need to plan software projects'
       });
@@ -191,6 +192,7 @@ and report generation`;
       expect(result.questionsAnswers).toHaveLength(1);
       expect(result.questionsAnswers![0].question).toBe('What are the main features we need to implement?');
       expect(result.questionsAnswers![0].answer).toBe('User authentication, project analysis, and report generation');
+      expect(result.questionsAnswers![0].id).toBe('QA-1');
     });
   });
   

@@ -203,6 +203,7 @@ export class DocumentParserNode {
           // Save previous Q&A if exists
           if (currentQuestion && currentAnswer) {
             qas.push({
+              id: `QA-${qas.length + 1}`,
               question: currentQuestion,
               answer: currentAnswer
             });
@@ -222,8 +223,9 @@ export class DocumentParserNode {
       }
       
       // Save last Q&A pair
-      if (currentQuestion && currentAnswer) {
+      if (currentQuestion.trim() && currentAnswer.trim()) {
         qas.push({
+          id: `QA-${qas.length + 1}`,
           question: currentQuestion.trim(),
           answer: currentAnswer.trim()
         });
