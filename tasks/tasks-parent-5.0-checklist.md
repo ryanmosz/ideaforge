@@ -66,7 +66,7 @@
   - [x] 5.4.1 Set up Reddit OAuth2 in n8n
   - [x] 5.4.2 Configure subreddit search logic
   - [x] 5.4.3 Implement post and comment parsing
-  - [ ] 5.4.4 Add content filtering (NSFW, deleted)
+  - [x] 5.4.4 Add content filtering (NSFW, deleted)
   - [x] 5.4.5 Create TypeScript types for Reddit data
   - [ ] 5.4.6 Test OAuth token refresh
   - [ ] 5.4.7 Verify rate limit compliance
