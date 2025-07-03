@@ -28,25 +28,26 @@
 
 ## Tasks
 
-- [ ] 4.0 Implement LangGraph agent architecture
-  - [ ] 4.1 Set up LangGraph project structure
-  - [ ] 4.2 Define ProjectState TypeScript schema
-  - [ ] 4.3 Create core analysis nodes
-    - [ ] 4.3.1 DocumentParserNode - Parse org-mode structure
-    - [ ] 4.3.2 RequirementsAnalysisNode - Understand project goals
-    - [ ] 4.3.3 MoscowCategorizationNode - Apply MoSCoW framework
-    - [ ] 4.3.4 KanoEvaluationNode - Assess user value
-    - [ ] 4.3.5 DependencyAnalysisNode - Map feature relationships
-  - [ ] 4.4 Create research nodes (stubs for Task 5.0)
-    - [ ] 4.4.1 TechnologyExtractionNode - Parse for tech keywords
-    - [ ] 4.4.2 HackerNewsSearchNode - Query HN discussions
-    - [ ] 4.4.3 RedditSearchNode - Search relevant subreddits
-    - [ ] 4.4.4 AdditionalResearchNode - Process user topics
-    - [ ] 4.4.5 ResearchSynthesisNode - Combine findings
-  - [ ] 4.5 Create refinement nodes
-    - [ ] 4.5.1 ResponseProcessingNode - Handle :RESPONSE: tags
-    - [ ] 4.5.2 FeedbackIntegrationNode - Update analysis
-    - [ ] 4.5.3 ChangelogGenerationNode - Track changes
-  - [ ] 4.6 Build graph edges and conditional routing
-  - [ ] 4.7 Implement state persistence between sessions
-  - [ ] 4.8 Create LangGraph-CLI communication layer 
+# Parent Task 4.0: Implement LangGraph agent architecture
+
+- [x] 4.1 Set up LangGraph project structure
+- [x] 4.2 Define ProjectState TypeScript schema
+- [ ] 4.3 Create core analysis nodes:
+  - [ ] 4.3.1 DocumentParserNode - Parse org-mode structure  
+  - [ ] 4.3.2 RequirementsAnalysisNode - Understand project goals
+  - [ ] 4.3.3 MoscowCategorizationNode - Apply MoSCoW framework
+  - [ ] 4.3.4 KanoEvaluationNode - Assess user value
+  - [ ] 4.3.5 DependencyAnalysisNode - Map feature relationships
+- [ ] 4.4 Create research nodes:
+  - [ ] 4.4.1 TechnologyExtractionNode - Parse for tech keywords
+  - [ ] 4.4.2 HackerNewsSearchNode - Query HN discussions
+  - [ ] 4.4.3 RedditSearchNode - Search relevant subreddits
+  - [ ] 4.4.4 AdditionalResearchNode - Process user topics
+  - [ ] 4.4.5 ResearchSynthesisNode - Combine findings
+- [ ] 4.5 Create refinement nodes:
+  - [ ] 4.5.1 ResponseProcessingNode - Handle :RESPONSE: tags
+  - [ ] 4.5.2 FeedbackIntegrationNode - Update analysis
+  - [ ] 4.5.3 ChangelogGenerationNode - Track changes
+- [ ] 4.6 Build graph edges and conditional routing
+- [ ] 4.7 Implement state persistence between sessions
+- [ ] 4.8 Create LangGraph-CLI communication layer 
