@@ -1,8 +1,7 @@
 import { Command } from 'commander';
-import { CommandContext } from '../types';
+import { CommandContext, ErrorHandler } from '../types';
 import { ProgressManager } from '../progress-manager';
 import { FileHandler } from '../../services/file-handler';
-import { createUserErrorMessage } from '../../utils/error-handler';
 
 /**
  * Base class for all CLI commands
@@ -11,10 +10,12 @@ import { createUserErrorMessage } from '../../utils/error-handler';
 export abstract class BaseCommand {
   protected fileHandler: FileHandler;
   protected progressManager: ProgressManager;
+  protected errorHandler: ErrorHandler;
 
   constructor(protected context: CommandContext) {
     this.fileHandler = context.fileHandler;
     this.progressManager = context.progressManager;
+    this.errorHandler = context.errorHandler;
   }
 
   /**
@@ -41,9 +42,8 @@ export abstract class BaseCommand {
       this.progressManager.stop();
     }
     
-    // Format error message for user
-    const errorMessage = createUserErrorMessage(error);
-    console.error(errorMessage);
+    // Use the error handler from context
+    this.errorHandler.handle(error);
     
     // Exit with error code
     process.exit(1);
