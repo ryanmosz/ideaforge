@@ -6,29 +6,36 @@ IdeaForge is a command-line tool that helps developers and project managers thor
 
 ## 🎯 Quick Demo (5 minutes)
 
-Want to see IdeaForge in action? Follow these steps:
+### Requirements
+- **Node.js 18+** (check with `node --version`)
+- **OpenAI API key** ([Get one here](https://platform.openai.com/api-keys))
+- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/)) - Required for HackerNews/Reddit research features
+
+### Run the Full Demo
 
 ```bash
-# 1. Clone the repository
+# 1. Clone and setup
 git clone https://github.com/yourusername/ideaforge.git
 cd ideaforge
-
-# 2. Install dependencies
 npm install
+npm run setup  # Enter your OpenAI API key
 
-# 3. Run interactive setup
-npm run setup
+# 2. Start Docker & n8n (for research features)
+docker run -d --name n8n -p 5678:5678 -e N8N_BASIC_AUTH_ACTIVE=false n8nio/n8n:latest
+sleep 10  # Wait for n8n to start
+cd n8n-workflows && ./deploy.sh && cd ..
 
-# 4. Run the demo!
-npm run test:grammarly
+# 3. Run the demo!
+./DEMO-RUN.sh
 ```
 
-The demo analyzes an AI-powered writing assistant for marketing professionals, showcasing:
-- **MoSCoW prioritization** of features like tone transformation
-- **AI recommendations** for implementation
-- **Risk analysis** and technical suggestions
+The demo creates `DEMO-OUTPUT-NEW.org` with:
+- **MoSCoW prioritization** of features (Must/Should/Could/Won't)
+- **Kano analysis** (Basic/Performance/Excitement features)
+- **HackerNews insights** from developer discussions
+- **Technology recommendations** based on community consensus
 
-📝 **Note**: You'll need an OpenAI API key. Get one at [platform.openai.com](https://platform.openai.com)
+Check the "Project Overview" section to see synthesized research from HackerNews!
 
 ### Try It Yourself!
 

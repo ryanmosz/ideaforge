@@ -138,6 +138,23 @@ export class AgentRunner extends EventEmitter {
       
       finalState = finalCheckpoint.channel_values as unknown as ProjectState;
       
+      // DEBUG: Log what's in the state
+      if (process.env.DEBUG) {
+        console.log('\n[DEBUG] Final state contents:');
+        console.log('- Requirements:', finalState.requirements?.length || 0);
+        console.log('- MoSCoW Analysis:', {
+          must: finalState.moscowAnalysis?.must?.length || 0,
+          should: finalState.moscowAnalysis?.should?.length || 0,
+          could: finalState.moscowAnalysis?.could?.length || 0,
+          wont: finalState.moscowAnalysis?.wont?.length || 0
+        });
+        console.log('- Kano Analysis:', {
+          basic: finalState.kanoAnalysis?.basic?.length || 0,
+          performance: finalState.kanoAnalysis?.performance?.length || 0,
+          excitement: finalState.kanoAnalysis?.excitement?.length || 0
+        });
+      }
+      
       // Save final state
       await this.sessionManager.saveState();
       

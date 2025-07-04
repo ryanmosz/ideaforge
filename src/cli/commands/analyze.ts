@@ -95,6 +95,22 @@ export class AnalyzeCommand extends BaseCommand {
       progress.update('💾 Saving analysis results...');
       const outputPath = path.resolve(options.output);
       
+      // DEBUG: Log the MoSCoW and Kano data before export
+      if (process.env.DEBUG) {
+        console.log('\n[DEBUG] Analysis result:');
+        console.log('- MoSCoW:', result.moscowAnalysis ? {
+          must: result.moscowAnalysis.must?.length || 0,
+          should: result.moscowAnalysis.should?.length || 0,
+          could: result.moscowAnalysis.could?.length || 0,
+          wont: result.moscowAnalysis.wont?.length || 0
+        } : 'null');
+        console.log('- Kano:', result.kanoAnalysis ? {
+          basic: result.kanoAnalysis.basic?.length || 0,
+          performance: result.kanoAnalysis.performance?.length || 0,
+          excitement: result.kanoAnalysis.excitement?.length || 0
+        } : 'null');
+      }
+      
       // Convert to ParsedDocumentData format for compatibility
       const exportData = {
         metadata: result.metadata || {
