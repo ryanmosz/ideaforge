@@ -1,150 +1,152 @@
 # IdeaForge Tester Setup Guide
 
-## 🚀 Quick Demo (2 minutes)
+## 🚀 Fastest Demo (30 seconds)
 
-If you just want to see IdeaForge in action:
+**After setup, just run:**
 
 ```bash
-# From project root directory
-npm install
-npm run setup  # Enter your OpenAI API key when prompted
-npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1
+cd demo
+./run-demo.sh
 ```
 
-Check `demo/grammarly-analysis.org` for the AI-generated analysis!
+The demo script handles everything and shows clean output perfect for screen recording!
 
 ---
 
-## Complete Setup Guide
+## First Time Setup (2 minutes)
 
 ### Prerequisites
-
-#### Required
-- **macOS** (10.15 or later) or **Linux**
 - **Node.js 18+** ([Download](https://nodejs.org/))
 - **OpenAI API Key** ([Get one here](https://platform.openai.com/api-keys))
 
-#### Optional (for Research Features)
-- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/))
-- **Git** (for cloning the repository)
-
-### Installation Steps
-
-1. **Clone and Install**
-   ```bash
-   git clone <repository-url>
-   cd G2P3
-   npm install
-   ```
-
-2. **Configure OpenAI**
-   ```bash
-   npm run setup
-   # Enter your OpenAI API key when prompted
-   ```
-
-3. **Run the Demo**
-   ```bash
-   # Basic analysis (AI only)
-   npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1
-   
-   # With research (requires Docker - see below)
-   npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1 --research
-   ```
-
-### Enabling Research Features (Optional)
-
-Research features fetch real insights from HackerNews and Reddit. This requires Docker and n8n setup:
-
-1. **Install Docker Desktop**
-   - Download from [docker.com](https://www.docker.com/products/docker-desktop/)
-   - Start Docker Desktop
-   - Verify: `docker --version`
-
-2. **Start n8n**
-   ```bash
-   # Run n8n workflow engine
-   docker run -d \
-     --name n8n \
-     -p 5678:5678 \
-     -v ~/.n8n:/home/node/.n8n \
-     -e N8N_BASIC_AUTH_ACTIVE=false \
-     -e N8N_HOST=localhost \
-     -e N8N_PORT=5678 \
-     -e N8N_PROTOCOL=http \
-     n8nio/n8n:latest
-   ```
-
-3. **Import Workflows**
-   - Open http://localhost:5678 in your browser
-   - Import these workflow files:
-     - `n8n-workflows/hackernews-search-v2.json`
-     - `n8n-workflows/health-check-v2.json`
-   - Activate each workflow (toggle the switch)
-
-4. **Test Research**
-   ```bash
-   npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1 --research
-   ```
-
-### What to Expect
-
-The analysis will generate:
-- **Project Overview**: Executive summary with technology recommendations
-- **MoSCoW Analysis**: Requirements prioritized as Must/Should/Could/Won't Have
-- **Kano Analysis**: Features categorized as Basic/Performance/Excitement
-- **Requirements**: Detailed functional requirements with dependencies
-- **Research Insights**: Real developer opinions from HackerNews (if enabled)
-
-### Troubleshooting
-
-**"OpenAI API key not found"**
-- Run `npm run setup` again
-- Check `.env` file exists with your key
-
-**"Rate limit exceeded"**
-- OpenAI free tier has limits
-- Wait 1 minute and retry
-- Check usage at platform.openai.com
-
-**"Cannot connect to n8n"**
-- Ensure Docker is running
-- Check n8n container: `docker ps`
-- Restart: `docker restart n8n`
-
-**"Model not found"**
-- Use `--model gpt-4` or `--model gpt-3.5-turbo`
-- Default is `o3-mini` which may not be available
-
-### Quick Commands
+### Quick Setup
 
 ```bash
-# View available options
-npm run dev -- analyze --help
+# 1. Clone the project
+git clone <repository-url>
+cd G2P3
+
+# 2. Install and configure
+npm install
+npm run setup  # Enter your OpenAI API key
+
+# 3. Go to demo folder
+cd demo
+
+# 4. Run the demo!
+./run-demo.sh
+```
+
+## Demo Script Options
+
+The `run-demo.sh` script provides a clean interface:
+
+```bash
+# Basic AI analysis (default)
+./run-demo.sh
+
+# With research insights (needs Docker + n8n)
+./run-demo.sh --research
 
 # Use different AI models
-npm run dev -- analyze demo/example-grammarly-demo.org --model gpt-4
+./run-demo.sh --model gpt-4
+./run-demo.sh --model gpt-3.5-turbo
 
-# Start fresh (ignore previous analysis)
-npm run dev -- analyze demo/example-grammarly-demo.org --fresh
+# Analyze your own file
+./run-demo.sh --input my-idea.org --output my-analysis.org
 
-# Custom output location
-npm run dev -- analyze demo/example-grammarly-demo.org --output my-analysis.org
+# See all options
+./run-demo.sh --help
 ```
 
-### Cleanup
+## Manual Commands (Alternative)
+
+If you prefer direct commands:
 
 ```bash
-# Stop n8n (if running)
-docker stop n8n
-docker rm n8n
-
-# Remove n8n data
-rm -rf ~/.n8n
+# From the demo folder
+../bin/ideaforge analyze example-grammarly-demo.org --output grammarly-analysis.org --model gpt-4.1
 ```
 
-## Need Help?
+## Enabling Research Features (Optional)
 
-- Basic features work without Docker - just OpenAI API key needed
-- Research features are optional enhancements
-- Check `demo/README.md` for architecture details 
+Research features fetch real insights from HackerNews and Reddit:
+
+### 1. Install Docker Desktop
+- Download from [docker.com](https://www.docker.com/products/docker-desktop/)
+- Start Docker Desktop
+- Verify: `docker --version`
+
+### 2. Start n8n
+```bash
+docker run -d \
+  --name n8n \
+  -p 5678:5678 \
+  -v ~/.n8n:/home/node/.n8n \
+  -e N8N_BASIC_AUTH_ACTIVE=false \
+  -e N8N_HOST=localhost \
+  -e N8N_PORT=5678 \
+  -e N8N_PROTOCOL=http \
+  n8nio/n8n:latest
+```
+
+### 3. Import Workflows
+1. Open http://localhost:5678
+2. Click "Add workflow" → "Import from File"
+3. Import from project root:
+   - `n8n-workflows/hackernews-search-v2.json`
+   - `n8n-workflows/health-check-v2.json`
+4. Activate each workflow (toggle to green)
+
+### 4. Test with Research
+```bash
+./run-demo.sh --research
+```
+
+## What's in the Demo
+
+- **`example-grammarly-demo.org`** - Sample project description
+- **`grammarly-analysis.org`** - AI-generated analysis output
+- **`run-demo.sh`** - Clean demo runner script
+- **`README.md`** - System architecture details
+
+## Expected Output
+
+The analysis generates:
+- **Executive Summary** with technology recommendations
+- **MoSCoW Analysis** - Must/Should/Could/Won't Have priorities
+- **Kano Analysis** - Basic/Performance/Excitement features
+- **Requirements** with dependency mapping
+- **Research Insights** from developers (if --research enabled)
+
+## Troubleshooting
+
+### OpenAI Issues
+- **"API key not found"** → Run `npm run setup` from project root
+- **"Rate limit"** → Wait 60 seconds, or check usage at platform.openai.com
+- **"Model not found"** → Use `--model gpt-4` or `--model gpt-3.5-turbo`
+
+### Docker/n8n Issues
+- **"Cannot connect"** → Ensure Docker Desktop is running
+- **"Port 5678 in use"** → `docker stop n8n && docker rm n8n`
+- **Check status** → `docker ps | grep n8n`
+
+## Creating Your Own Analysis
+
+```bash
+# Write your project idea
+nano my-startup.org
+
+# Analyze it
+./run-demo.sh --input my-startup.org --output my-startup-analysis.org
+```
+
+## Quick Reference
+
+```bash
+# All from demo folder:
+./run-demo.sh                    # Basic demo
+./run-demo.sh --research         # With HN/Reddit insights
+./run-demo.sh --model gpt-4      # Different model
+./run-demo.sh --help            # See all options
+``` 

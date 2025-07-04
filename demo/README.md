@@ -2,16 +2,65 @@
 
 ## Quick Start
 
-Run the demo with this single command from the project root:
+**Run the demo from this folder:**
 
 ```bash
-npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1
+cd demo
+./run-demo.sh
 ```
 
-For research features (requires Docker + n8n setup):
+That's it! The script handles everything and creates `grammarly-analysis.org`.
+
+## Demo Options
+
 ```bash
-npm run dev -- analyze demo/example-grammarly-demo.org --output demo/grammarly-analysis.org --model gpt-4.1 --research
+# Basic AI analysis (default)
+./run-demo.sh
+
+# With research insights from HackerNews/Reddit
+./run-demo.sh --research
+
+# Use a different AI model
+./run-demo.sh --model gpt-4
+
+# See all options
+./run-demo.sh --help
 ```
+
+## Manual Commands
+
+If you prefer running commands directly:
+
+```bash
+# From this demo folder
+../bin/ideaforge analyze example-grammarly-demo.org --output grammarly-analysis.org --model gpt-4.1
+
+# With research
+../bin/ideaforge analyze example-grammarly-demo.org --output grammarly-analysis.org --model gpt-4.1 --research
+```
+
+## First Time Setup
+
+If this is your first time using IdeaForge:
+
+```bash
+# Go to project root
+cd ..
+
+# Install and configure
+npm install
+npm run setup  # Enter your OpenAI API key
+
+# Return to demo
+cd demo
+```
+
+## Demo Files
+
+- **`example-grammarly-demo.org`** - Sample input: an AI writing assistant for marketers
+- **`grammarly-analysis.org`** - Sample output showing the full analysis
+- **`run-demo.sh`** - Demo runner script for clean terminal recordings
+- **`TESTER-SETUP-GUIDE.md`** - Complete setup instructions
 
 ## System Overview
 
@@ -39,19 +88,23 @@ We chose a hybrid architecture combining **LangGraph** for core AI orchestration
 
 This architecture gives us the best of both worlds: sophisticated AI orchestration with flexible external integrations, while maintaining performance and reliability.
 
-## Demo Files
-
-- **Input**: `example-grammarly-demo.org` - A sample project description for an AI-powered writing assistant
-- **Output**: `grammarly-analysis.org` - The comprehensive analysis with MoSCoW/Kano frameworks
-- **Setup Guide**: `TESTER-SETUP-GUIDE.md` - Complete setup instructions for testers
-
 ## Expected Results
 
-The analysis will produce:
+The analysis produces:
 - Executive summary with technology recommendations
 - Requirements categorized by MoSCoW (Must/Should/Could/Won't)
 - Kano analysis (Basic/Performance/Excitement features)
 - Dependency mapping between requirements
 - Research insights from developer communities (if --research flag used)
 
-All output is formatted with 80-character line wrapping for optimal readability. 
+All output is formatted with 80-character line wrapping for optimal readability.
+
+## Try Your Own Project
+
+```bash
+# Create your own project description
+nano my-project.org
+
+# Analyze it
+./run-demo.sh --input my-project.org --output my-analysis.org
+``` 
